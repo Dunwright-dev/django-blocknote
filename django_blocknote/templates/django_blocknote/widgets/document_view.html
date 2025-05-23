@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>{{ document.title }}</title>
+        <meta charset="utf-8">
+        <style>
+        body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .document-header { border-bottom: 1px solid #eee; margin-bottom: 20px; padding-bottom: 10px; }
+        .document-meta { color: #666; font-size: 0.9em; margin-top: 5px; }
+        .btn { display: inline-block; padding: 8px 12px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; margin-right: 5px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="document-header">
+                <h1>{{ document.title }}</h1>
+                <div class="document-meta">
+                    By {{ document.created_by.get_full_name|default:document.created_by.username }} |
+                    {{ document.updated_at|date:"M d, Y H:i" }}
+                    {% if document.is_published %}| Published{% endif %}
+                </div>
+                <div style="margin-top: 10px;">
+                    {% if request.user == document.created_by %}
+                        <a href="{% url 'django_blocknote:document_edit' document.id %}"
+                           class="btn">Edit</a>
+                    {% endif %}
+                    <a href="{% url 'django_blocknote:document_list' %}"
+                       class="btn"
+                       style="background: #6c757d">Back to List</a>
+                </div>
+            </div>
+            <div class="document-content">
+                {% if document.content %}
+                    <div id="blocknote-viewer" data-content="{{ document.content|safe }}"></div>
+                {% else %}
+                    <p>
+                        <em>This document is empty.</em>
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+        <script src="{% load static %}{% static 'django_blocknote/js/blocknote.js' %}"></script>
+        <script>
+        // Render read-only BlockNote content
+        document.addEventListener('DOMContentLoaded', function() {
+            const viewer = document.getElementById('blocknote-viewer');
+            if (viewer && typeof DjangoBlockNote !== 'undefined') {
+                const content = JSON.parse(viewer.dataset.content || '[]');
+                DjangoBlockNote.renderReadOnly(viewer, content);
+            }
+        });
+        </script>
+    </body>
+</html>

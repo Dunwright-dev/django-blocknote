@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-blocknote"
+version = "0.1.0"
+description = "BlockNote rich text editor integration for Django"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.0",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = ["django", "rich-text-editor", "blocknote", "wysiwyg"]
+dependencies = [
+    "Django>=4.2",
+]
+requires-python = ">=3.8"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-django", 
+    "black",
+    "isort",
+    "flake8",
+    "build",
+    "twine",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/django-blocknote"
+Documentation = "https://django-blocknote.readthedocs.io/"
+Repository = "https://github.com/yourusername/django-blocknote"
+"Bug Tracker" = "https://github.com/yourusername/django-blocknote/issues"
+
+[tool.setuptools.packages.find]
+include = ["django_blocknote*"]
+
+[tool.setuptools.package-data]
+django_blocknote = [
+    "static/django_blocknote/js/*",
+    "static/django_blocknote/css/*", 
+    "templates/django_blocknote/*",
+    "templates/django_blocknote/*/*",
+]

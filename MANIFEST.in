@@ -1,0 +1,6 @@
+include README.md
+include LICENSE
+recursive-include django_blocknote/static *
+recursive-include django_blocknote/templates *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]

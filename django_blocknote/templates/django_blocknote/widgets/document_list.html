@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Documents</title>
+        <meta charset="utf-8">
+        <style>
+        body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .document-list { list-style: none; padding: 0; }
+        .document-item { border: 1px solid #ddd; margin-bottom: 10px; padding: 15px; border-radius: 4px; }
+        .document-title { font-size: 1.2em; font-weight: bold; margin-bottom: 5px; }
+        .document-meta { color: #666; font-size: 0.9em; }
+        .btn { display: inline-block; padding: 8px 12px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; margin-right: 5px; }
+        .btn-success { background: #28a745; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>My Documents</h1>
+            <a href="{% url 'django_blocknote:document_create' %}"
+               class="btn btn-success">Create New Document</a>
+            {% if documents %}
+                <ul class="document-list">
+                    {% for document in documents %}
+                        <li class="document-item">
+                            <div class="document-title">{{ document.title }}</div>
+                            <div class="document-meta">
+                                Created: {{ document.created_at|date:"M d, Y" }} |
+                                Updated: {{ document.updated_at|date:"M d, Y H:i" }} |
+                                {% if document.is_published %}
+                                    Published
+                                {% else %}
+                                    Draft
+                                {% endif %}
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <a href="{% url 'django_blocknote:document_view' document.id %}"
+                                   class="btn">View</a>
+                                <a href="{% url 'django_blocknote:document_edit' document.id %}"
+                                   class="btn">Edit</a>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>
+                    No documents yet. <a href="{% url 'django_blocknote:document_create' %}">Create your first document</a>.
+                </p>
+            {% endif %}
+        </div>
+    </body>
+</html>

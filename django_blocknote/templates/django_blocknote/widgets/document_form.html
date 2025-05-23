@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>{{ title }}</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        {{ form.media }}
+        <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+        .form-group input[type="text"] { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; }
+        .btn { padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #0056b3; }
+        .save-status { position: fixed; top: 20px; right: 20px; padding: 8px 12px; border-radius: 4px; z-index: 1000; }
+        .save-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .save-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>{{ title }}</h1>
+            {% if messages %}
+                {% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}
+            {% endif %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    {{ form.title.label_tag }}
+                    {{ form.title }}
+                    {% if form.title.errors %}<div class="error">{{ form.title.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.content.label_tag }}
+                    {{ form.content }}
+                    {% if form.content.errors %}<div class="error">{{ form.content.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">{{ form.is_published }} {{ form.is_published.label_tag }}</div>
+                <button type="submit" class="btn">Save Document</button>
+                <a href="{% url 'django_blocknote:document_list' %}"
+                   class="btn"
+                   style="background: #6c757d;
+                          margin-left: 10px">Back to List</a>
+            </form>
+            <div id="save-status" class="save-status" style="display: none;"></div>
+        </div>
+        {% if document %}
+            <script>
+        // Auto-save functionality
+        let saveTimeout;
+        
+        function showSaveStatus(message, isError = false) {
+            const status = document.getElementById('save-status');
+            status.textContent = message;
+            status.className = 'save-status ' + (isError ? 'save-error' : 'save-success');
+            status.style.display = 'block';
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 3000);
+        }
+        
+        function autoSave(content) {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                fetch('{% url "django_blocknote:document_autosave" document.id %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({ content: content })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showSaveStatus('Auto-saved');
+                    } else {
+                        showSaveStatus('Auto-save failed', true);
+                    }
+                })
+                .catch(error => {
+                    showSaveStatus('Auto-save failed', true);
+                    console.error('Auto-save error:', error);
+                });
+            }, 2000);
+        }
+        
+        // Hook into BlockNote editor changes
+        document.addEventListener('blocknote-change', function(event) {
+            autoSave(event.detail.content);
+        });
+            </script>
+        {% endif %}
+    </body>
+</html>

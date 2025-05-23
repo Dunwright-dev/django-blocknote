@@ -1,0 +1,69 @@
+<!-- django_blocknote/templates/django_blocknote/widgets/blocknote.html -->
+<div class="django-blocknote-wrapper">
+    <textarea name="{{ widget.name }}"
+              id="{{ widget.editor_id }}"
+              class="{{ widget.attrs.class }}"
+              style="display: none"
+              {% if widget.attrs.required %}required{% endif %}>{{ widget.value|default:'' }}</textarea>
+    <div id="{{ widget.editor_id }}_editor"
+         class="django-blocknote-container"
+         data-editor-id="{{ widget.editor_id }}"
+         style="min-height: 200px;
+                border: 1px solid #ddd;
+                padding: 10px"></div>
+</div>
+<script>
+(function() {
+    const editorId = '{{ widget.editor_id|escapejs }}';
+    
+    // Parse the properly serialized JSON
+    let widgetConfig, widgetInitialContent;
+    
+    try {
+        widgetConfig = JSON.parse('{{ widget.config_json|escapejs }}');
+        console.log('✅ Config parsed:', widgetConfig);
+    } catch (e) {
+        console.error('❌ Error parsing config:', e);
+        widgetConfig = {};
+    }
+    
+    try {
+        widgetInitialContent = JSON.parse('{{ widget.initial_content_json|escapejs }}');
+        console.log('✅ Initial content parsed:', widgetInitialContent);
+    } catch (e) {
+        console.error('❌ Error parsing initial content:', e);
+        widgetInitialContent = [];
+    }
+    
+    let initAttempts = 0;
+    const maxAttempts = 50;
+    
+    function attemptInit() {
+        initAttempts++;
+        console.log(`🔄 Attempt ${initAttempts} to initialize BlockNote widget: ${editorId}`);
+        
+        if (typeof DjangoBlockNote !== 'undefined' && typeof React !== 'undefined') {
+            console.log('✅ All dependencies ready, initializing...');
+            console.log('📋 Widget data:', { config: widgetConfig, initialContent: widgetInitialContent });
+            
+            try {
+                DjangoBlockNote.initWidgetWithData(editorId, widgetConfig, widgetInitialContent);
+                console.log('✅ Widget initialized successfully');
+            } catch (error) {
+                console.error('❌ Error initializing widget:', error);
+            }
+        } else if (initAttempts < maxAttempts) {
+            console.log('⏳ Dependencies not ready yet, retrying in 100ms...');
+            setTimeout(attemptInit, 100);
+        } else {
+            console.error('❌ Timeout waiting for BlockNote dependencies');
+        }
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', attemptInit);
+    } else {
+        attemptInit();
+    }
+})();
+</script>

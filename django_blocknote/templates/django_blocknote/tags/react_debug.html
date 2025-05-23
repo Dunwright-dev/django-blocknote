@@ -1,0 +1,29 @@
+{% if debug %}
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.group('🔧 BlockNote Debug Info');
+    console.log('React available:', typeof React !== 'undefined');
+    console.log('ReactDOM available:', typeof ReactDOM !== 'undefined');
+    console.log('DjangoBlockNote available:', typeof DjangoBlockNote !== 'undefined');
+    
+    if (typeof React !== 'undefined') {
+        console.log('React version:', React.version);
+    } else {
+        console.error('❌ React is not loaded!');
+    }
+    
+    if (typeof ReactDOM !== 'undefined') {
+        console.log('ReactDOM available: ✅');
+    } else {
+        console.error('❌ ReactDOM is not loaded!');
+    }
+    
+    if (typeof DjangoBlockNote !== 'undefined') {
+        console.log('DjangoBlockNote functions:', Object.keys(DjangoBlockNote));
+    } else {
+        console.error('❌ DjangoBlockNote is not loaded!');
+    }
+    console.groupEnd();
+});
+    </script>
+{% endif %}

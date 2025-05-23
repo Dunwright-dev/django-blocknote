@@ -1,0 +1,31 @@
+{
+  "name": "django-blocknote-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "NODE_ENV=production webpack --mode production",
+    "dev-build": "NODE_ENV=development webpack --mode development",
+    "dev": "NODE_ENV=development webpack --mode development --watch --watch-options-poll=1000",
+    "clean": "rm -rf ../django_blocknote/static/django_blocknote/js/* ../django_blocknote/static/django_blocknote/css/*"
+  },
+  "dependencies": {
+    "@blocknote/core": "0.31.0",
+    "@blocknote/mantine": "0.31.0",
+    "@blocknote/react": "0.31.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.0",
+    "@babel/preset-env": "^7.23.0",
+    "@babel/preset-react": "^7.22.0",
+    "babel-loader": "^9.1.0",
+    "css-loader": "^6.8.0",
+    "css-minimizer-webpack-plugin": "^7.0.2",
+    "mini-css-extract-plugin": "^2.7.0",
+    "terser-webpack-plugin": "^5.3.14",
+    "webpack": "^5.89.0",
+    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack-cli": "^5.1.0"
+  }
+}
