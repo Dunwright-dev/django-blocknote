@@ -10,60 +10,127 @@
          data-editor-id="{{ widget.editor_id }}"
          style="min-height: 200px;
                 border: 1px solid #ddd;
-                padding: 10px"></div>
+                padding: 10px">
+        <!-- Loading placeholder -->
+        <div class="blocknote-loading"
+             style="display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 180px;
+                    color: #666;
+                    font-style: italic">
+            <div>
+                <div style="margin-bottom: 8px;">📝 Loading rich text editor...</div>
+                <div style="font-size: 12px;">
+                    If this persists, ensure {% templatetag openblock %} blocknote_full {% templatetag closeblock %} is included in your template.
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+<script type="application/json" id="{{ widget.editor_id }}_config">{{ widget.config_json|safe }}</script>
+<script type="application/json" id="{{ widget.editor_id }}_content">{{ widget.initial_content_json|safe }}</script>
 <script>
 (function() {
     const editorId = '{{ widget.editor_id|escapejs }}';
+    const container = document.getElementById(editorId + '_editor');
     
-    // Parse the properly serialized JSON
-    let widgetConfig, widgetInitialContent;
-    
-    try {
-        widgetConfig = JSON.parse('{{ widget.config_json|escapejs }}');
-        console.log('✅ Config parsed:', widgetConfig);
-    } catch (e) {
-        console.error('❌ Error parsing config:', e);
-        widgetConfig = {};
-    }
-    
-    try {
-        widgetInitialContent = JSON.parse('{{ widget.initial_content_json|escapejs }}');
-        console.log('✅ Initial content parsed:', widgetInitialContent);
-    } catch (e) {
-        console.error('❌ Error parsing initial content:', e);
-        widgetInitialContent = [];
-    }
-    
-    let initAttempts = 0;
-    const maxAttempts = 50;
-    
-    function attemptInit() {
-        initAttempts++;
-        console.log(`🔄 Attempt ${initAttempts} to initialize BlockNote widget: ${editorId}`);
+    // Use the global BlockNoteManager if available
+    if (typeof window.BlockNoteManager !== 'undefined') {
+        console.log('🎯 Using BlockNoteManager for widget:', editorId);
         
-        if (typeof DjangoBlockNote !== 'undefined' && typeof React !== 'undefined') {
-            console.log('✅ All dependencies ready, initializing...');
-            console.log('📋 Widget data:', { config: widgetConfig, initialContent: widgetInitialContent });
-            
-            try {
-                DjangoBlockNote.initWidgetWithData(editorId, widgetConfig, widgetInitialContent);
-                console.log('✅ Widget initialized successfully');
-            } catch (error) {
-                console.error('❌ Error initializing widget:', error);
+        // Parse config and content from script tags (safer than data attributes)
+        let config = {};
+        let initialContent = null;
+        
+        try {
+            const configScript = document.getElementById(editorId + '_config');
+            if (configScript && configScript.textContent.trim()) {
+                config = JSON.parse(configScript.textContent);
             }
-        } else if (initAttempts < maxAttempts) {
-            console.log('⏳ Dependencies not ready yet, retrying in 100ms...');
-            setTimeout(attemptInit, 100);
-        } else {
-            console.error('❌ Timeout waiting for BlockNote dependencies');
+        } catch (e) {
+            console.warn('Error parsing config for', editorId, e);
+            config = {};
         }
-    }
-    
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', attemptInit);
+        
+        try {
+            const contentScript = document.getElementById(editorId + '_content');
+            if (contentScript && contentScript.textContent.trim()) {
+                const parsed = JSON.parse(contentScript.textContent);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    initialContent = parsed;
+                }
+            }
+        } catch (e) {
+            console.warn('Error parsing initial content for', editorId, e);
+            initialContent = null;
+        }
+        
+        // Initialize through manager
+        window.BlockNoteManager.initWidget(editorId, config, initialContent);
+        
     } else {
-        attemptInit();
+        // Fallback: Legacy initialization method
+        console.log('⚠️  BlockNoteManager not available, using legacy initialization for:', editorId);
+        
+        let initAttempts = 0;
+        const maxAttempts = 30; // Reduced attempts since manager should handle this
+        
+        function attemptLegacyInit() {
+            initAttempts++;
+            
+            if (typeof DjangoBlockNote !== 'undefined' && typeof React !== 'undefined') {
+                console.log('✅ Dependencies ready for legacy init:', editorId);
+                
+                try {
+                    let config = {};
+                    let initialContent = null;
+                    
+                    try {
+                        const configScript = document.getElementById(editorId + '_config');
+                        if (configScript && configScript.textContent.trim()) {
+                            config = JSON.parse(configScript.textContent);
+                        }
+                        
+                        const contentScript = document.getElementById(editorId + '_content');
+                        if (contentScript && contentScript.textContent.trim()) {
+                            const parsed = JSON.parse(contentScript.textContent);
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                initialContent = parsed;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Error parsing data for legacy init:', e);
+                    }
+                    
+                    DjangoBlockNote.initWidgetWithData(editorId, config, initialContent);
+                    console.log('✅ Legacy widget initialized');
+                    
+                } catch (error) {
+                    console.error('❌ Legacy initialization error:', error);
+                }
+            } else if (initAttempts < maxAttempts) {
+                setTimeout(attemptLegacyInit, 200);
+            } else {
+                console.error('❌ Legacy initialization timeout for:', editorId);
+                // Show error in the loading placeholder
+                const loadingDiv = container.querySelector('.blocknote-loading');
+                if (loadingDiv) {
+                    loadingDiv.innerHTML = `
+                        <div style="color: #dc3545;">
+                            <div style="margin-bottom: 8px;">⚠️ Editor failed to load</div>
+                            <div style="font-size: 12px;">Please ensure BlockNote dependencies are properly loaded.</div>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', attemptLegacyInit);
+        } else {
+            attemptLegacyInit();
+        }
     }
 })();
 </script>

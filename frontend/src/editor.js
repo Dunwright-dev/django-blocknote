@@ -1,4 +1,4 @@
-// frontend/src/editor.js - Fixed syntax for BlockNote 0.31.0 & React 19
+// frontend/src/editor.js - Enhanced for HTMX compatibility
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { useCreateBlockNote } from '@blocknote/react';
@@ -6,7 +6,7 @@ import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/core/fonts/inter.css';
 import '@blocknote/mantine/style.css';
 
-console.log('Loading BlockNote 0.31.0 with React 19...');
+console.log('Loading BlockNote 0.31.0 with React 19 (HTMX compatible)...');
 
 // Error boundary for React 19
 class BlockNoteErrorBoundary extends React.Component {
@@ -130,7 +130,9 @@ function SafeBlockNoteEditor(props) {
     }, React.createElement(BlockNoteEditor, props));
 }
 
-// Widget initialization function
+// Enhanced widget initialization with cleanup tracking
+const widgetRoots = new Map(); // Track React roots for cleanup
+
 function initWidgetWithData(editorId, config = {}, initialContent = null) {
     console.log('Initializing BlockNote widget:', editorId);
     
@@ -140,6 +142,23 @@ function initWidgetWithData(editorId, config = {}, initialContent = null) {
     if (!container || !textarea) {
         console.error('Elements not found for editor:', editorId);
         return;
+    }
+
+    // Cleanup existing React root if it exists
+    if (widgetRoots.has(editorId)) {
+        console.log('Cleaning up existing React root for:', editorId);
+        try {
+            widgetRoots.get(editorId).unmount();
+        } catch (e) {
+            console.warn('Error unmounting existing root:', e);
+        }
+        widgetRoots.delete(editorId);
+    }
+
+    // Clear loading placeholder
+    const loadingDiv = container.querySelector('.blocknote-loading');
+    if (loadingDiv) {
+        loadingDiv.style.display = 'none';
     }
 
     // Process initial content
@@ -194,7 +213,10 @@ function initWidgetWithData(editorId, config = {}, initialContent = null) {
         const root = createRoot(container);
         root.render(element);
         
-        console.log('BlockNote widget rendered successfully');
+        // Store root for cleanup
+        widgetRoots.set(editorId, root);
+        
+        console.log('BlockNote widget rendered successfully:', editorId);
         
         // Visual feedback
         setTimeout(() => {
@@ -205,9 +227,9 @@ function initWidgetWithData(editorId, config = {}, initialContent = null) {
                 setTimeout(() => {
                     container.style.backgroundColor = '';
                 }, 1000);
-                console.log('BlockNote editor loaded successfully');
+                console.log('BlockNote editor loaded successfully:', editorId);
             } else {
-                console.log('BlockNote fallback editor active');
+                console.log('BlockNote fallback editor active:', editorId);
             }
         }, 100);
         
@@ -304,15 +326,29 @@ function renderReadOnly(container, content) {
     }
 }
 
+// Cleanup function for HTMX
+function cleanupWidget(editorId) {
+    if (widgetRoots.has(editorId)) {
+        console.log('Cleaning up widget:', editorId);
+        try {
+            widgetRoots.get(editorId).unmount();
+            widgetRoots.delete(editorId);
+        } catch (e) {
+            console.warn('Error during widget cleanup:', e);
+        }
+    }
+}
+
 // Export to window
 if (typeof window !== 'undefined') {
     window.DjangoBlockNote = {
         initWidget,
         initWidgetWithData,
-        renderReadOnly
+        renderReadOnly,
+        cleanupWidget
     };
-    console.log('DjangoBlockNote 0.31.0 ready');
+    console.log('DjangoBlockNote 0.31.0 ready (HTMX compatible)');
 }
 
 // ES6 exports
-export { initWidget, initWidgetWithData, renderReadOnly };
+export { initWidget, initWidgetWithData, renderReadOnly, cleanupWidget };
