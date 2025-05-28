@@ -1,0 +1,37 @@
+<!-- django_blocknote/templates/django_blocknote/tags/blocknote_viewer.html -->
+{% if has_content %}
+    <div id="django-blocknote-wrapper"
+         class="{{ css_class }}"
+         style="border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 16px;
+                background: #ffffff;
+                min-height: 100px">
+        <textarea name="{{ widget.name }}"
+                  id="{{ container_id }}"
+                  style="display: none"> </textarea>
+        <div class="blocknote-loading"
+             id="{{ container_id }}_editor"
+             data-editor-id="{{ container_id }}"
+             data-readonly="true">
+            <div>
+                <div style="margin-bottom: 8px;">📖 Loading content...</div>
+                <div style="font-size: 12px;">Rendering rich text content</div>
+            </div>
+        </div>
+    </div>
+    <!-- Store content in script tag -->
+    <script type="application/json" id="{{ container_id }}_content">{{ content_json|safe }}</script>
+{% else %}
+    <div class="{{ css_class }}"
+         style="text-align: center;
+                color: #9ca3af;
+                font-style: italic;
+                padding: 40px 20px;
+                background: #f9fafb;
+                border: 1px dashed #d1d5db;
+                border-radius: 8px">
+        <div style="font-size: 2em; margin-bottom: 10px;">📝</div>
+        <div>No content to display</div>
+    </div>
+{% endif %}

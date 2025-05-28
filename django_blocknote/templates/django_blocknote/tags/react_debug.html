@@ -1,0 +1,60 @@
+{% if debug %}
+    <script>
+// Listen for BlockNote ready event
+document.addEventListener('blocknote-ready', function(event) {
+    console.group('🔧 BlockNote Debug Info (After BlockNote Ready)');
+    console.log('BlockNote ready event received at:', new Date(event.detail.timestamp));
+    console.log('Available functions:', event.detail.functions);
+    console.log('React available:', typeof React !== 'undefined');
+    console.log('ReactDOM available:', typeof ReactDOM !== 'undefined');
+    console.log('DjangoBlockNote available:', typeof DjangoBlockNote !== 'undefined');
+    
+    if (typeof React !== 'undefined') {
+        console.log('React version:', React.version);
+    } else {
+        console.error('❌ React is not loaded!');
+    }
+    
+    if (typeof ReactDOM !== 'undefined') {
+        console.log('ReactDOM available: ✅');
+    } else {
+        console.error('❌ ReactDOM is not loaded!');
+    }
+    
+    if (typeof DjangoBlockNote !== 'undefined') {
+        console.log('DjangoBlockNote functions:', Object.keys(DjangoBlockNote));
+    } else {
+        console.error('❌ DjangoBlockNote is not loaded!');
+    }
+    console.groupEnd();
+});
+
+// Also run the original check for comparison
+document.addEventListener('DOMContentLoaded', function() {
+    console.group('🔧 BlockNote Debug Info (DOMContentLoaded)');
+    console.log('React available:', typeof React !== 'undefined');
+    console.log('ReactDOM available:', typeof ReactDOM !== 'undefined');
+    console.log('DjangoBlockNote available:', typeof DjangoBlockNote !== 'undefined');
+    
+    // If BlockNote isn't ready yet, set up a timer to check periodically
+    if (typeof DjangoBlockNote === 'undefined') {
+        console.log('⏳ DjangoBlockNote not ready yet, will check again...');
+        let checkCount = 0;
+        const checkInterval = setInterval(() => {
+            checkCount++;
+            console.log(`Check #${checkCount}: DjangoBlockNote available:`, typeof DjangoBlockNote !== 'undefined');
+            
+            if (typeof DjangoBlockNote !== 'undefined') {
+                console.log('✅ DjangoBlockNote became available after', checkCount * 100, 'ms');
+                clearInterval(checkInterval);
+            } else if (checkCount >= 50) { // Stop after 5 seconds
+                console.error('❌ DjangoBlockNote still not available after 5 seconds');
+                clearInterval(checkInterval);
+            }
+        }, 100);
+    }
+    
+    console.groupEnd();
+});
+    </script>
+{% endif %}

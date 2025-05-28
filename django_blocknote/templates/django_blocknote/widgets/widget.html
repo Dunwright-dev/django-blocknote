@@ -1,0 +1,72 @@
+{% load static %}
+<div class="django-blocknote-container" data-field-name="{{ widget.name }}">
+    <textarea 
+        name="{{ widget.name }}" 
+        id="{{ widget.attrs.id }}"{% if widget.attrs.class %} 
+        class="{{ widget.attrs.class }}"{% endif %}
+        data-blocknote-config="{{ widget.config_json|escapejs }}"
+        style="display: none;">{{ widget.value|default:"" }}</textarea>
+    <div class="blocknote-editor" id="editor-{{ widget.attrs.id }}"></div>
+</div>
+
+<script>
+(function() {
+    // Use IIFE to avoid global variable conflicts
+    var editorId = '{{ widget.attrs.id }}';
+    var initFunctionName = 'initializeEditor_' + editorId.replace(/[^a-zA-Z0-9]/g, '_');
+    
+    // Create unique initialization function
+    window[initFunctionName] = function() {
+        var textarea = document.getElementById(editorId);
+        if (!textarea) {
+            console.error('BlockNote: Textarea not found for ID:', editorId);
+            return;
+        }
+        
+        var config;
+        try {
+            config = JSON.parse(textarea.getAttribute('data-blocknote-config'));
+        } catch (e) {
+            console.error('BlockNote: Invalid config JSON for editor:', editorId, e);
+            config = {};
+        }
+        
+        try {
+            new window.DjangoBlockNote(textarea, config);
+            console.log('BlockNote editor initialized successfully for:', editorId);
+        } catch (error) {
+            console.error('Failed to initialize BlockNote editor for:', editorId, error);
+            // Fallback: show the textarea
+            textarea.style.display = 'block';
+        }
+    };
+    
+    // Initialize when ready
+    function tryInitialize() {
+        if (typeof window.DjangoBlockNote !== 'undefined') {
+            window[initFunctionName]();
+            // Clean up the init function after use
+            delete window[initFunctionName];
+        } else {
+            // Retry after a short delay if library isn't loaded yet
+            setTimeout(function() {
+                if (typeof window.DjangoBlockNote !== 'undefined') {
+                    window[initFunctionName]();
+                    delete window[initFunctionName];
+                } else {
+                    console.error('DjangoBlockNote library not loaded for editor:', editorId);
+                    // Fallback: show the textarea
+                    var textarea = document.getElementById(editorId);
+                    if (textarea) textarea.style.display = 'block';
+                }
+            }, 100);
+        }
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', tryInitialize);
+    } else {
+        tryInitialize();
+    }
+})();
+</script>

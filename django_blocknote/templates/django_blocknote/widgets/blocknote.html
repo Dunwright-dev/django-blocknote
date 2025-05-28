@@ -1,0 +1,33 @@
+<!-- django_blocknote/templates/django_blocknote/widgets/blocknote.html -->
+<div class="django-blocknote-wrapper">
+    <textarea name="{{ widget.name }}"
+              id="{{ widget.editor_id }}"
+              class="{{ widget.attrs.class }}"
+              style="display: none"
+              {% if widget.attrs.required %}required{% endif %}>{{ widget.value|default:'' }}</textarea>
+    <div id="{{ widget.editor_id }}_editor"
+         class="django-blocknote-container"
+         data-editor-id="{{ widget.editor_id }}"
+         data-readonly="false"
+         style="min-height: 200px;
+                border: 1px solid #ddd;
+                padding: 10px">
+        <!-- Loading placeholder -->
+        <div class="blocknote-loading"
+             style="display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 180px;
+                    color: #666;
+                    font-style: italic">
+            <div>
+                <div style="margin-bottom: 8px;">📝 Loading rich text editor...</div>
+                <div style="font-size: 12px;">
+                    If this persists, ensure {% templatetag openblock %} blocknote_full {% templatetag closeblock %} is included in your template.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="application/json" id="{{ widget.editor_id }}_config">{{ widget.config_json|safe }}</script>
+<script type="application/json" id="{{ widget.editor_id }}_content">{{ widget.initial_content_json|safe }}</script>

@@ -1,0 +1,133 @@
+/* Django BlockNote Styles */
+
+/* Base widget styles */
+.django-blocknote-widget {
+  min-height: 200px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: white;
+}
+
+/* Container for the widget */
+.django-blocknote-container {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+/* Editor styles */
+.blocknote-editor {
+  min-height: 200px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 12px;
+  background: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.blocknote-editor:focus,
+.blocknote-editor.focused {
+  border-color: #007cba;
+  box-shadow: 0 0 0 1px #007cba;
+}
+
+/* Placeholder styles */
+.blocknote-editor .placeholder {
+  color: #999;
+  pointer-events: none;
+  position: absolute;
+  top: 12px;
+  left: 12px;
+}
+
+.blocknote-editor:focus .placeholder,
+.blocknote-editor.focused .placeholder {
+  display: none;
+}
+
+/* Content styles */
+.blocknote-editor p {
+  margin: 0 0 1em 0;
+}
+
+.blocknote-editor p:last-child {
+  margin-bottom: 0;
+}
+
+/* Dark theme */
+.blocknote-editor[data-theme="dark"] {
+  background: #1a1a1a;
+  color: white;
+  border-color: #444;
+}
+
+.blocknote-editor[data-theme="dark"]:focus,
+.blocknote-editor[data-theme="dark"].focused {
+  border-color: #0096c7;
+  box-shadow: 0 0 0 1px #0096c7;
+}
+
+.blocknote-editor[data-theme="dark"] .placeholder {
+  color: #666;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .blocknote-editor {
+    min-height: 150px;
+    padding: 8px;
+  }
+  
+  .blocknote-editor .placeholder {
+    top: 8px;
+    left: 8px;
+  }
+}
+
+/* Animation styles */
+.blocknote-editor {
+  transition: all 0.2s ease;
+}
+
+.blocknote-editor:hover {
+  border-color: #999;
+}
+
+/* Error state */
+.blocknote-editor.error {
+  border-color: #dc3545;
+}
+
+.blocknote-editor.error:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 1px #dc3545;
+}
+
+/* Loading state */
+.blocknote-editor.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.blocknote-editor.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #ddd;
+  border-top: 2px solid #007cba;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
