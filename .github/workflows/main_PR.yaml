@@ -277,14 +277,16 @@ jobs:
           sudo apt-get install -y gnupg2
 
       - name: Import GPG key
-        if: steps.check_fork.outputs.is_fork != 'true'
+        env:
+          SGK: ${{ secrets.SGK }}
         run: |
-          echo "${{ secrets.SGK }}" | gpg --batch --import
-          KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep sec | awk '{print $2}' | cut -d'/' -f2)
+          echo "$SGK" | gpg --batch --import
+          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/ {print $5; exit}')
           if [ -z "$KEY_ID" ]; then
               echo "Error: Unable to retrieve GPG Key ID"
               exit 1
           fi
+          echo "GPG Key Imported. Key ID: $KEY_ID"
           echo "trust\n5\ny\nquit" | gpg --batch --command-fd 0 --edit-key $KEY_ID
           echo "GPG_KEY_ID=${KEY_ID}" >> $GITHUB_ENV
 
