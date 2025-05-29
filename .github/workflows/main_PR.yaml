@@ -1,4 +1,4 @@
-name: 1. Test and Coverage
+name: Test and Coverage
 
 on:
   pull_request:
@@ -22,381 +22,338 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Get full history
+          fetch-depth: 0
       - id: check
         run: |
-          echo "============ DEBUG INFO ============"
-
-          # Get the actual PR commit message, not the merge commit
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             COMMIT_MSG=$(git log --format=%B -n 1 ${{ github.event.pull_request.head.sha }})
           else
             COMMIT_MSG="${{ github.event.head_commit.message }}"
           fi
-
-          echo "Commit message: $COMMIT_MSG"
-
+          
           if echo "$COMMIT_MSG" | grep -q "\[workflow-test\]"; then
-            echo "Test mode detected in commit message"
             echo "is_test_mode=true" >> $GITHUB_OUTPUT
           else
-            echo "Regular mode - running tests"
             echo "is_test_mode=false" >> $GITHUB_OUTPUT
           fi
 
-          echo "Final is_test_mode value:"
-          cat $GITHUB_OUTPUT
+  test_and_coverage:
+    needs: check_mode
+    if: needs.check_mode.outputs.is_test_mode != 'true'
+    name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    permissions:
+      checks: write
+      contents: read
+      pull-requests: write
+      actions: read
+      issues: write
+      statuses: write
 
-  # test_and_coverage:
-  #   needs: check_mode
-  #   if: needs.check_mode.outputs.is_test_mode != 'true'
-  #   name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
-  #   permissions:
-  #     checks: write
-  #     contents: read
-  #     pull-requests: write  # Needed for PR comments
-  #     actions: read # For cache access
-  #   env:
-  #     TESTING_DJSTRIPE_FOREIGN_KEY_TO_FIELD: ${{ vars.DJSTRIPE_FOREIGN_KEY_TO_FIELD }}
-  #     TESTING_DJSTRIPE_WEBHOOK_SECRET: ${{ vars.DJSTRIPE_WEBHOOK_SECRET }}
-  #     TESTING_DJSTRIPE_WEBHOOK_VALIDATION: ${{ vars.DJSTRIPE_WEBHOOK_VALIDATION }}
-  #     TESTING_HYPOTHESIS_DEADLINE: ${{ vars.HYPOTHESIS_DEADLINE }}
-  #     TESTING_HYPOTHESIS_DEBUG: ${{ github.event.inputs.debug_hypothesis || vars.HYPOTHESIS_DEBUG || '' }}
-  #     TESTING_HYPOTHESIS_MAX_EXAMPLES : ${{ vars.HYPOTHESIS_MAX_EXAMPLES }}
-  #     TESTING_HYPOTHESIS_PROFILE: ${{ vars.HYPOTHESIS_PROFILE }}
-  #     TESTING_STRIPE_LIVE_MODE: ${{ vars.STRIPE_LIVE_MODE }}
-  #   outputs:
-  #     tests_check_name: ${{ steps.get_outputs.outputs.tests_check_name }}
-  #
-  #   timeout-minutes: 30
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       python-version: ["3.13"]
-  #       os: [ubuntu-latest]
-  #   runs-on: ${{ matrix.os }}
-  #
-  #   services:
-  #     redis:
-  #       image: redis
-  #       ports:
-  #         - 6379:6379
-  #       options: >-
-  #         --health-cmd "redis-cli ping"
-  #         --health-interval 10s
-  #         --health-timeout 5s
-  #         --health-retries 5
-  #
-  #   concurrency:
-  #     group: ${{ github.workflow }}-${{ matrix.python-version }}-${{ github.ref }}
-  #     cancel-in-progress: true
-  #
-  #   steps:
-  #     - name: Debug Test Mode
-  #       run: |
-  #         echo "Check mode output: ${{ needs.check_mode.outputs.is_test_mode }}"
-  #         echo "Condition evaluation: ${{ needs.check_mode.outputs.is_test_mode != 'true' }}"
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-  #
-  #     - name: Debug environment
-  #       run: |
-  #         printenv | sort
-  #
-  #     - name: Set up Python ${{ matrix.python-version }}
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #
-  #     - name: Generate pip cache hash
-  #       id: pip-cache-hash
-  #       run: |
-  #         echo "Computing hash from requirements files..."
-  #         echo "Files being hashed:"
-  #         files_to_hash="requirements.txt $(find config/requirements -name '*.txt' 2>/dev/null) docs/requirements.txt"
-  #
-  #         # First list the files we're actually hashing
-  #         for file in $files_to_hash; do
-  #           if [ -f "$file" ]; then
-  #             echo "  - $file"
-  #           fi
-  #         done
-  #
-  #         # Then generate the hash from those same files
-  #         hash_files=$(for file in $files_to_hash; do
-  #           if [ -f "$file" ]; then
-  #             cat "$file"
-  #           fi
-  #         done | sha256sum | cut -d' ' -f1)
-  #
-  #         echo "Generated hash: ${hash_files}"
-  #         echo "hash=${hash_files}" >> $GITHUB_OUTPUT
-  #
-  #     - name: Restore pip cache
-  #       id: cache-pip-restore
-  #       uses: actions/cache/restore@v4
-  #       with:
-  #         path: ~/.cache/pip
-  #         key: refs/heads/main/pip-${{ matrix.python-version }}-${{ steps.pip-cache-hash.outputs.hash }}
-  #         restore-keys: |
-  #           refs/heads/main/pip-${{ matrix.python-version }}-
-  #
-  #     - name: Cache status and setup
-  #       run: |
-  #         echo "Debugging cache outputs:"
-  #         echo "Cache-hit: '${{ steps.cache-pip-restore.outputs.cache-hit }}'"
-  #         echo "Cache key used: ${{ steps.cache-pip-restore.outputs.cache-primary-key }}"
-  #         echo "Cache key matched: ${{ steps.cache-pip-restore.outputs.cache-matched-key }}"
-  #
-  #         # Install dependencies if cache miss
-  #         if [ -z "${{ steps.cache-pip-restore.outputs.cache-hit }}" ] || [ "${{ steps.cache-pip-restore.outputs.cache-hit }}" != 'true' ]; then
-  #
-  #           echo "Cache miss detected, proceeding with dependency installation..."
-  #
-  #           python -m pip install --upgrade pip setuptools
-  #
-  #           # Install all requirements through the main requirements.txt
-  #           # This will follow all the -r references automatically
-  #           pip install -r requirements.txt
-  #
-  #           echo -e "\nPost-installation cache status:"
-  #           echo "Cache location contents:"
-  #           ls -la ~/.cache/pip
-  #           echo -e "\nCache size:"
-  #           du -sh ~/.cache/pip
-  #         else
-  #           echo "Cache hit detected, skipping dependency installation"
-  #         fi
-  #
-  #     - name: Save pip cache
-  #       id: cache-pip-save
-  #       if: always() && steps.cache-pip-restore.outputs.cache-hit != 'true'
-  #       uses: actions/cache/save@v4
-  #       with:
-  #         path: ~/.cache/pip
-  #         key: ${{ steps.cache-pip-restore.outputs.cache-primary-key }}
-  #
-  #     - name: Test with tox
-  #       run: |
-  #         python -m pip install --upgrade pip tox tox-gh-actions
-  #         set -
-  #         echo "Python version:"
-  #         python --version
-  #         echo "\nTox version:"
-  #         tox --version
-  #         echo "tox -l"
-  #         echo "\nRunning tox:"
-  #
-  #         HYPOTHESIS_FLAGS=""
-  #         if [ "$TESTING_HYPOTHESIS_DEBUG" = "true" ]; then
-  #           HYPOTHESIS_FLAGS="--hypothesis-show-statistics"
-  #         fi
-  #
-  #         tox -vv -- $HYPOTHESIS_FLAGS
-  #
-  #       env:
-  #         PYTEST_ADDOPTS: "-v"
-  #         FORCE_COLOR: "1"
-  #         DJANGO_SETTINGS_MODULE: "config.settings.test"
-  #         DATABASE_URL: "sqlite:///test_db.sqlite3"
-  #         PYTEST_XDIST_AUTO_NUM_WORKERS: "2"
-  #         PYTEST_DEBUG: "1"
-  #
-  #     - name: Check coverage file exists
-  #       run: |
-  #         if [ ! -f coverage.xml ]; then
-  #           echo "coverage.xml not found"
-  #           exit 1
-  #         fi
-  #
-  #     - name: Generate coverage report and check threshold
-  #       if: github.event_name == 'pull_request'
-  #       run: python .github/scripts/generate_coverage_report.py
-  #
-  #     - name: Add coverage report comment
-  #       if: github.event_name == 'pull_request'
-  #       uses: actions/github-script@v7
-  #       with:
-  #         script: |
-  #           const fs = require('fs');
-  #           const reportContent = fs.readFileSync('coverage_report.md', 'utf8');
-  #
-  #           await github.rest.issues.createComment({
-  #             issue_number: context.issue.number,
-  #             owner: context.repo.owner,
-  #             repo: context.repo.repo,
-  #             body: reportContent
-  #           });
-  #
-  #     - name: Set Outputs
-  #       id: get_outputs
-  #       run: |
-  #         echo "tests_check_name=Test Python ${{ matrix.python-version }} on ${{ matrix.os }}" >> $GITHUB_OUTPUT
-  #
-  #     - name: Testing job status
-  #       if: always()
-  #       uses: actions/github-script@v7
-  #       with:
-  #         script: |
-  #           const { owner, repo } = context.repo;
-  #
-  #           const conclusion = '${{ job.status }}' === 'success' ? 'success' : 'failure';
-  #
-  #           const check =await github.rest.checks.create({
-  #             owner,
-  #             repo,
-  #             name: 'Test Python ${{ matrix.python-version }} on ${{ matrix.os }}',
-  #             head_sha: context.sha,
-  #             status: 'completed',
-  #             conclusion: conclusion,
-  #             output: {
-  #               title: conclusion === 'success' ? 'Tests passed' : 'Tests failed',
-  #               summary: conclusion === 'success' ? 'All tests completed successfully' : 'Some tests failed'
-  #             }
-  #           });
-  #           core.setOutput('check_run_id', check.data.id);
-  #
-  # update_changelog:
-  #   needs: [check_mode, test_and_coverage]
-  #   if: |
-  #     needs.check_mode.outputs.is_test_mode != 'true' &&
-  #     success() && 
-  #     github.event_name == 'pull_request' && 
-  #     !contains(github.event.pull_request.title, 'skip-changelog')
-  #   name: Update Changelog
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     checks: write
-  #     contents: write  # Needed for pushing changes
-  #     pull-requests: read
-  #   outputs:
-  #     changelog_check_name: ${{ steps.get_outputs.outputs.changelog_check_name }}
-  #   timeout-minutes: 10
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-  #
-  #     - name: Get latest changelog from main
-  #       run: git restore --source origin/main -- CHANGELOG.md
-  #
-  #     - name: Set up Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: "3.13"
-  #
-  #     - name: Install changelog dependencies
-  #       run: |
-  #         python -m pip install --upgrade pip
-  #         pip install PyGithub tenacity
-  #
-  #     - name: Run Update Changelog Script
-  #       id: update_changelog
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       run: |
-  #         if [ ! -f CHANGELOG.md ] || [ ! -f version.toml ]; then
-  #           echo "status=failure" >> $GITHUB_OUTPUT
-  #           echo "### Changelog Update Failed" >> $GITHUB_STEP_SUMMARY
-  #           echo "Error: Required CHANGELOG.md and/or version.toml files not found" >> $GITHUB_STEP_SUMMARY
-  #           echo "Error: Required CHANGELOG.md and/or version.toml files not found"
-  #           exit 1
-  #         fi
-  #
-  #         # Store the original SHA before any changes
-  #         echo "original_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-  #
-  #         git checkout ${{ github.head_ref }} || exit 1
-  #
-  #         # Run the script and capture its exit code
-  #         python .github/scripts/update_changelog.py
-  #         SCRIPT_EXIT=$?
-  #
-  #         if [ $SCRIPT_EXIT -eq 0 ]; then
-  #           # Check if there are actual changes to commit
-  #           if [ -n "$(git status --porcelain)" ]; then
-  #             git config --local user.email "action@github.com" || exit 1
-  #             git config --local user.name "GitHub Action" || exit 1
-  #             git add CHANGELOG.md version.toml README.rst || exit 1
-  #             git commit -m "chore(version): Bump to $(cat version.toml | grep '__version__' | cut -d'"' -f2)" || exit 1
-  #             git push origin HEAD:${{ github.head_ref }} || exit 1
-  #
-  #             # Store the new SHA after commit
-  #             echo "new_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-  #             echo "changes_made=true" >> $GITHUB_OUTPUT
-  #           else
-  #             echo "changes_made=false" >> $GITHUB_OUTPUT
-  #           fi
-  #
-  #           echo "status=success" >> $GITHUB_OUTPUT
-  #           echo "### Changelog Updated Successfully" >> $GITHUB_STEP_SUMMARY
-  #           echo "Files updated: CHANGELOG.md and version.toml" >> $GITHUB_STEP_SUMMARY
-  #
-  #         elif [ $SCRIPT_EXIT -eq 2 ]; then
-  #           echo "status=success" >> $GITHUB_OUTPUT
-  #           echo "changes_made=false" >> $GITHUB_OUTPUT
-  #           echo "### Changelog Check Complete" >> $GITHUB_STEP_SUMMARY
-  #           echo "No changes needed in changelog" >> $GITHUB_STEP_SUMMARY
-  #         else
-  #           echo "status=failure" >> $GITHUB_OUTPUT
-  #           echo "### Changelog Update Failed" >> $GITHUB_STEP_SUMMARY
-  #           echo "Error: Changelog update script failed with exit code $SCRIPT_EXIT" >> $GITHUB_STEP_SUMMARY
-  #           exit 1
-  #         fi
-  #
-  #     - name: Set Outputs
-  #       id: get_outputs
-  #       run: |
-  #         # Set the output for use in other jobs
-  #         echo "changelog_check_name=Update Changelog" >> $GITHUB_OUTPUT
-  #
-  #     - name: Update PR Status
-  #       if: steps.update_changelog.outputs.changes_made == 'true'
-  #       uses: actions/github-script@v7
-  #       with:
-  #         script: |
-  #           const { owner, repo } = context.repo;
-  #           const newSha = '${{ steps.update_changelog.outputs.new_sha }}';
-  #           const testName = '${{ needs.test_and_coverage.outputs.tests_check_name }}';
-  #           const changelogName = '${{ steps.get_outputs.outputs.changelog_check_name }}';
-  #
-  #           // Create new status checks for the new SHA
-  #           await github.rest.checks.create({
-  #             owner,
-  #             repo,
-  #             name: changelogName,
-  #             head_sha: newSha,
-  #             status: 'completed',
-  #             conclusion: 'success',
-  #             output: {
-  #               title: 'Changelog updated',
-  #               summary: 'Changelog was processed and updated successfully'
-  #             }
-  #           });
-  #
-  #           // Copy over the test status to the new SHA
-  #           await github.rest.checks.create({
-  #             owner,
-  #             repo,
-  #             name: testName,
-  #             head_sha: newSha,
-  #             status: 'completed',
-  #             conclusion: 'success',
-  #             output: {
-  #               title: 'Tests passed',
-  #               summary: 'All tests completed successfully (copied from previous SHA)'
-  #             }
-  #           });
-  #
-  # workflow_test:
-  #   needs: check_mode
-  #   if: needs.check_mode.outputs.is_test_mode == 'true'
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Test workflow
-  #       run: |
-  #         echo "Running in workflow test mode"
-  #         # Add any specific workflow testing steps here
-  #
+    outputs:
+      tests_check_name: ${{ steps.get_outputs.outputs.tests_check_name }}
+
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.13"]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ matrix.python-version }}-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Generate pip cache hash
+        id: pip-cache-hash
+        run: |
+          files_to_hash="requirements.txt docs/requirements.txt"
+          hash_files=$(for file in $files_to_hash; do
+            if [ -f "$file" ]; then
+              cat "$file"
+            fi
+          done | sha256sum | cut -d' ' -f1)
+          echo "hash=${hash_files}" >> $GITHUB_OUTPUT
+
+      - name: Restore pip cache
+        id: cache-pip-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/pip
+          key: refs/heads/main/pip-${{ matrix.python-version }}-${{ steps.pip-cache-hash.outputs.hash }}
+          restore-keys: |
+            refs/heads/main/pip-${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        if: steps.cache-pip-restore.outputs.cache-hit != 'true'
+        run: |
+          python -m pip install --upgrade pip setuptools
+          pip install -r requirements.txt
+
+      - name: Save pip cache
+        if: always() && steps.cache-pip-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ steps.cache-pip-restore.outputs.cache-primary-key }}
+
+      - name: Test with tox
+        run: |
+          python -m pip install --upgrade pip tox tox-gh-actions
+          HYPOTHESIS_FLAGS=""
+          if [ "$TESTING_HYPOTHESIS_DEBUG" = "true" ]; then
+            HYPOTHESIS_FLAGS="--hypothesis-show-statistics"
+          fi
+          tox -vv -- $HYPOTHESIS_FLAGS
+        env:
+          PYTEST_ADDOPTS: "-v"
+          FORCE_COLOR: "1"
+          DJANGO_SETTINGS_MODULE: "config.settings.test"
+          DATABASE_URL: "sqlite:///test_db.sqlite3"
+          PYTEST_XDIST_AUTO_NUM_WORKERS: "2"
+
+      - name: Check coverage file exists
+        run: |
+          if [ ! -f coverage.xml ]; then
+            echo "coverage.xml not found"
+            exit 1
+          fi
+
+      - name: Generate coverage report and check threshold
+        if: github.event_name == 'pull_request'
+        run: python .github/scripts/generate_coverage_report.py
+
+      - name: Add coverage report comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { readFileSync } = require('fs');
+            try {
+              const reportContent = readFileSync('coverage_report.md', 'utf8');
+
+              // Try to post as a PR comment first
+              try {
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: reportContent
+                });
+                console.log('Successfully posted coverage report as comment');
+              } catch (commentError) {
+                console.log('Failed to post comment:', commentError.message);
+
+                // If comment fails, try to extract coverage and post as PR status
+                const coverageMatch = reportContent.match(/Coverage:\s*(\d+(?:\.\d+)?%)/);
+                const coverageDesc = coverageMatch ? 
+                  `Coverage: ${coverageMatch[1]}` : 
+                  'Coverage report generated';
+
+                try {
+                  await github.rest.repos.createCommitStatus({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    sha: context.sha,
+                    state: 'success',
+                    description: coverageDesc,
+                    context: 'Coverage Report'
+                  });
+                  console.log('Successfully posted coverage as status');
+                } catch (statusError) {
+                  console.log('Failed to post status:', statusError.message);
+                  // At this point, both attempts failed, just log the coverage
+                  console.log('Coverage information:', coverageDesc);
+                }
+              }
+            } catch (fileError) {
+              console.log('Failed to read coverage report:', fileError.message);
+              core.setFailed('Could not read coverage report file');
+            }
+
+      - name: Set Outputs
+        id: get_outputs
+        run: |
+          echo "tests_check_name=Test Python ${{ matrix.python-version }} on ${{ matrix.os }}" >> $GITHUB_OUTPUT
+
+      - name: Testing job status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const conclusion = '${{ job.status }}' === 'success' ? 'success' : 'failure';
+
+            // Function to log result without failing
+            const logResult = (success, message) => {
+              if (success) {
+                console.log(`✓ ${message}`);
+              } else {
+                console.log(`⨯ ${message}`);
+                // Don't fail the workflow, just log the status
+              }
+            };
+
+            try {
+              // Try check run first
+              const check = await github.rest.checks.create({
+                owner,
+                repo,
+                name: 'Test Python ${{ matrix.python-version }} on ${{ matrix.os }}',
+                head_sha: context.sha,
+                status: 'completed',
+                conclusion: conclusion,
+                output: {
+                  title: conclusion === 'success' ? 'Tests passed' : 'Tests failed',
+                  summary: conclusion === 'success' ? 'All tests completed successfully' : 'Some tests failed'
+                }
+              });
+              core.setOutput('check_run_id', check.data.id);
+              logResult(true, 'Created check run successfully');
+            } catch (checkError) {
+              console.log('Check run creation failed, trying status API...');
+              try {
+                // Try status API as fallback
+                await github.rest.repos.createCommitStatus({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  sha: context.sha,
+                  state: conclusion === 'success' ? 'success' : 'failure',
+                  description: conclusion === 'success' ? 'Tests passed' : 'Tests failed',
+                  context: 'Test Python ${{ matrix.python-version }} on ${{ matrix.os }}'
+                });
+                logResult(true, 'Created status successfully');
+              } catch (statusError) {
+                // If both APIs fail, just log the result without failing the workflow
+                logResult(false, `Test result: ${conclusion} (unable to create status)`);
+                console.log('Both check run and status APIs failed. Test completed with status:', conclusion);
+              }
+            }
+
+  update_changelog:
+    needs: [check_mode, test_and_coverage]
+    if: |
+      needs.check_mode.outputs.is_test_mode != 'true' &&
+      success() && 
+      github.event_name == 'pull_request' && 
+      !contains(github.event.pull_request.title, 'skip-changelog')
+    name: Update Changelog
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: write
+      pull-requests: read
+    outputs:
+      changelog_check_name: ${{ steps.get_outputs.outputs.changelog_check_name }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if fork PR
+        id: check_fork
+        run: |
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            echo "is_fork=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_fork=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install GPG
+        if: steps.check_fork.outputs.is_fork != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnupg2
+
+      - name: Import GPG key
+        if: steps.check_fork.outputs.is_fork != 'true'
+        run: |
+          echo "${{ secrets.SGK }}" | gpg --batch --import
+          KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep sec | awk '{print $2}' | cut -d'/' -f2)
+          echo "trust\n5\ny\nquit" | gpg --batch --command-fd 0 --edit-key $KEY_ID
+          echo "GPG_KEY_ID=${KEY_ID}" >> $GITHUB_ENV
+
+      - name: Configure Git for signing
+        if: steps.check_fork.outputs.is_fork != 'true'
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "github-actions@users.noreply.github.com"
+          git config --global commit.gpgsign true
+          git config --global user.signingkey ${{ env.GPG_KEY_ID }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install changelog dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyGithub tenacity
+
+      - name: Update Changelog Script
+        id: update_changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f CHANGELOG.md ]  || [ ! -f docs/source/conf.py ] || [ ! -f README.rst ] || [ ! -f pyproject.toml ] || [ ! -f django_blocknote/__init__.py ] || [ ! -f version.toml ]; then
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "### Changelog Update Failed" >> $GITHUB_STEP_SUMMARY
+            echo "Error: Required files not found" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "original_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          git checkout ${{ github.head_ref }} || exit 1
+          python .github/scripts/update_changelog.py
+          SCRIPT_EXIT=$?
+          if [ $SCRIPT_EXIT -eq 0 ]; then
+            if [ -n "$(git status --porcelain)" ]; then
+                git add CHANGELOG.md docs/source/conf.py pyproject.toml README.rst django_blocknote/__init__.py version.toml
+                if [ "${{ steps.check_fork.outputs.is_fork }}" = "true" ]; then
+                  # For fork PRs, commit without signing
+                  git -c user.name="GitHub Actions Bot" \
+                      -c user.email="github-actions@users.noreply.github.com" \
+                      commit -m "chore(version): Bump to $(cat version.toml | grep '__version__' | cut -d'"' -f2)"
+                else
+                  # For non-fork PRs, commit with signing
+                  git -c user.name="GitHub Actions Bot" \
+                      -c user.email="github-actions@users.noreply.github.com" \
+                      -c user.signingkey="${GPG_KEY_ID}" \
+                      commit -S -m "chore(version): Bump to $(cat version.toml | grep '__version__' | cut -d'"' -f2)"
+                fi
+                git push origin HEAD:${{ github.head_ref }}
+                echo "new_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+                echo "changes_made=true" >> $GITHUB_OUTPUT
+            else
+                echo "changes_made=false" >> $GITHUB_OUTPUT
+            fi
+            echo "status=success" >> $GITHUB_OUTPUT
+          elif [ $SCRIPT_EXIT -eq 2 ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "changes_made=false" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+  workflow_test:
+    needs: check_mode
+    if: needs.check_mode.outputs.is_test_mode == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test workflow
+        run: echo "Running in workflow test mode"
+
+
