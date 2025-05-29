@@ -1,6 +1,10 @@
-import json  # noqa: I001
-from django.conf import settings
+import json
+from pathlib import Path
+
+import structlog
 from django.contrib.staticfiles import finders
+
+logger = structlog.get_logger(__name__)
 
 
 def get_vite_asset(asset_name):
@@ -14,38 +18,63 @@ def get_vite_asset(asset_name):
     Returns:
         str: The actual filename with hash (e.g., 'js/blocknote.abc123.js')
     """
+
     try:
         # Find the manifest file
-        manifest_path = finders.find("django_blocknote/.vite/manifest.json")
-        if not manifest_path:
+        if not (
+            manifest_path_str := finders.find("django_blocknote/.vite/manifest.json")
+        ):
             # Fallback to original filename if no manifest
             return f"django_blocknote/{asset_name}"
-
         # Read the manifest
-        with open(manifest_path) as f:
-            manifest = json.load(f)
-            print(f"\n**************\nLooking for {asset_name}")
-            print(f"JS entry found: {manifest.get('src/blocknote.js')}\n**********")
+        manifest = Path(manifest_path_str)
+        manifest = json.loads(manifest.read_text())
 
         # Handle specific asset lookups based on your manifest structure
-        if asset_name == "blocknote.js":
-            # Look for the JS entry
-            js_entry = manifest.get("src/blocknote.js")
-            if js_entry and "file" in js_entry:
-                return f"django_blocknote/{js_entry['file']}"
+        match asset_name:
+            case "blocknote.js":
+                js_entry = manifest.get("src/blocknote.js", {})
+                if file_path := js_entry.get("file", ""):
+                    asset_path = f"django_blocknote/{file_path}"
+                else:
+                    asset_path = "django_blocknote/js/blocknote.js"
+                return asset_path
 
-        elif asset_name == "blocknote.css" or asset_name.endswith(".css"):
-            # Look for the CSS entry (shows up as "style.css" in manifest)
-            css_entry = manifest.get("style.css")
-            if css_entry and "file" in css_entry:
-                return f"django_blocknote/{css_entry['file']}"
+            case name if name == "blocknote.css" or name.endswith(".css"):
+                css_entry = manifest.get("style.css", {})
+                if file_path := css_entry.get("file", ""):
+                    asset_path = f"django_blocknote/{file_path}"
+                else:
+                    asset_path = "django_blocknote/css/blocknote.css"
+                return asset_path
 
-        # Final fallback: return original path
+            case _:
+                # Final fallback: return original path
+                return f"django_blocknote/{asset_name}"
+
+    except FileNotFoundError:
+        msg = f"Warning: Vite manifest file not found for {asset_name}"
+        logger.exception(
+            event="get_vite_asset_file_not_found",
+            msg=msg,
+            data={"asset_name": asset_name},
+        )
         return f"django_blocknote/{asset_name}"
 
-    except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
-        # If anything goes wrong, fallback to original filename
-        if getattr(settings, "DEBUG", False):
-            print(f"Warning: Could not read Vite manifest for {asset_name}: {e}")
+    except json.JSONDecodeError:
+        msg = f"Warning: Invalid JSON in Vite manifest for {asset_name}"
+        logger.exception(
+            event="get_vite_asset_json_decode_error",
+            msg=msg,
+            data={"asset_name": asset_name},
+        )
         return f"django_blocknote/{asset_name}"
 
+    except KeyError as e:
+        msg = f"Warning: Missing key in Vite manifest for {asset_name}: {e}"
+        logger.exception(
+            event="get_vite_asset_key_error",
+            msg=msg,
+            data={"asset_name": asset_name, "missing_key": str(e)},
+        )
+        return f"django_blocknote/{asset_name}"
