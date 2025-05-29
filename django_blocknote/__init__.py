@@ -1,3 +1,2 @@
 # django_blocknote/__init__.py
-__version__ = "0.1.0"
-default_app_config = "django_blocknote.apps.DjangoBlocknoteConfig"
+__version__ = "2025.05.29.1"
