@@ -281,13 +281,17 @@ jobs:
         run: |
           echo "${{ secrets.SGK }}" | gpg --batch --import
           KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep sec | awk '{print $2}' | cut -d'/' -f2)
+          if [ -z "$KEY_ID" ]; then
+              echo "Error: Unable to retrieve GPG Key ID"
+              exit 1
+          fi
           echo "trust\n5\ny\nquit" | gpg --batch --command-fd 0 --edit-key $KEY_ID
           echo "GPG_KEY_ID=${KEY_ID}" >> $GITHUB_ENV
 
       - name: Configure Git for signing
         if: steps.check_fork.outputs.is_fork != 'true'
         run: |
-          git config --global user.name "GitHub Actions Bot"
+          git config --global user.name "GitHub Actions Bot (dj-bn)"
           git config --global user.email "github-actions@users.noreply.github.com"
           git config --global commit.gpgsign true
           git config --global user.signingkey ${{ env.GPG_KEY_ID }}
@@ -322,12 +326,12 @@ jobs:
                 git add CHANGELOG.md docs/source/conf.py pyproject.toml README.rst django_blocknote/__init__.py version.toml
                 if [ "${{ steps.check_fork.outputs.is_fork }}" = "true" ]; then
                   # For fork PRs, commit without signing
-                  git -c user.name="GitHub Actions Bot" \
+                  git -c user.name="GitHub Actions Bot (dj-bn)" \
                       -c user.email="github-actions@users.noreply.github.com" \
                       commit -m "chore(version): Bump to $(cat version.toml | grep '__version__' | cut -d'"' -f2)"
                 else
                   # For non-fork PRs, commit with signing
-                  git -c user.name="GitHub Actions Bot" \
+                  git -c user.name="GitHub Actions Bot (dj-bn)" \
                       -c user.email="github-actions@users.noreply.github.com" \
                       -c user.signingkey="${GPG_KEY_ID}" \
                       commit -S -m "chore(version): Bump to $(cat version.toml | grep '__version__' | cut -d'"' -f2)"
