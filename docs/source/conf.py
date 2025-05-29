@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
-__version__ = "0.1.0"
+__version__ = "2025.05.29.1"
 
 project = "django-blocknote"
 copyright = "2025, Ryan Sevelj & Mark Sevelj"
@@ -27,8 +27,48 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_inline_tabs",
     "sphinx.ext.todo",
-    "sphinx_mermaid_external",
 ]
+myst_enable_extensions = [
+    "colon_fence",
+    "mermaid",
+]
+"""
+The colon fence syntax is particularly useful because:
+
+Cleaner nesting - Easier to nest directives inside each other
+Better readability - The ::: stands out more than backticks
+Compatibility - Works well with tools that might get confused by nested backticks
+Flexibility - You can use different numbers of colons (:::, ::::, etc.) for nesting levels
+
+
+## without colon_fence
+```{note}
+This is a note block
+```
+
+```{warning}
+This is a warning
+```
+## with colon_fence
+:::{note}
+This is a note block
+:::
+
+:::{warning}
+This is a warning
+:::
+
+::::{grid} 2
+:::{card} Card 1
+Content here
+:::
+:::{card} Card 2
+More content
+:::
+::::
+
+"""
+
 
 templates_path = ["_templates"]
 exclude_patterns = [
