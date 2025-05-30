@@ -79,7 +79,7 @@ def blocknote_media():
     """
     # Get the actual asset URLs using Vite manifest
     css_url = static(get_vite_asset("blocknote.css"))
-    js_url = static(get_vite_asset("blocknote.js"))
+    js_url = static(get_vite_asset("src/blocknote.ts"))
 
     html = f"""
     <link rel="stylesheet" href="{css_url}">
@@ -89,7 +89,7 @@ def blocknote_media():
     if getattr(settings, "DEBUG", False):
         html += f"""
         <!-- Debug: CSS from {get_vite_asset("blocknote.css")} -->
-        <!-- Debug: JS from {get_vite_asset("blocknote.js")} -->
+        <!-- Debug: JS from {get_vite_asset("src/blocknote.ts")} -->
         """
 
     return mark_safe(html)
