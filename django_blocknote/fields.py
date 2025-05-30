@@ -1,5 +1,6 @@
-from django.conf import settings
 import json
+
+from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
