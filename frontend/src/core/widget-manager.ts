@@ -1,11 +1,11 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { BlockNoteEditor } from './editor.js';
+import { BlockNoteEditor } from './editor';
 
 // Enhanced widget initialization with cleanup tracking
 export const blockNoteRoots = new Map(); // Track React roots for cleanup
 
-export function initWidgetWithData(editorId, config = {}, initialContent = null, readonly = false) {
+export function initWidgetWithData(editorId: string, config: Record<string, unknown> = {}, initialContent: unknown = null, readonly: boolean = false) {
     console.log('Initializing BlockNote widget:', editorId);
     
     const container = document.getElementById(editorId + '_editor');
@@ -14,6 +14,23 @@ export function initWidgetWithData(editorId, config = {}, initialContent = null,
     if (!container || !textarea) {
         console.error('Elements not found for editor:', editorId);
         return;
+    }
+
+    // Read upload config from DOM
+    const uploadConfigElement = document.getElementById(`${editorId}_upload_config`);
+    let uploadConfig: Record<string, unknown> = {};
+    
+    if (uploadConfigElement) {
+        try {
+            const uploadConfigText = uploadConfigElement.textContent || '{}';
+            uploadConfig = JSON.parse(uploadConfigText);
+            console.log('📤 Upload config loaded for', editorId, ':', uploadConfig);
+        } catch (error) {
+            console.warn('⚠️ Failed to parse upload config for', editorId, ':', error);
+            uploadConfig = {}; // Fallback to empty config
+        }
+    } else {
+        console.log('📤 No upload config found for', editorId, ', using defaults');
     }
 
     // Cleanup existing React root if it exists
@@ -30,25 +47,25 @@ export function initWidgetWithData(editorId, config = {}, initialContent = null,
     // Clear loading placeholder
     const loadingDiv = container.querySelector('.blocknote-loading');
     if (loadingDiv) {
-        loadingDiv.style.display = 'none';
+        (loadingDiv as HTMLElement).style.display = 'none';
     }
 
     // Process initial content
-    let processedContent = null;
+    let processedContent: unknown = null;
     if (initialContent && Array.isArray(initialContent) && initialContent.length > 0) {
         processedContent = initialContent;
     }
     
     // Extract fallback text
     let fallbackText = '';
-    if (processedContent) {
+    if (processedContent && Array.isArray(processedContent)) {
         try {
             fallbackText = processedContent
-                .map(block => {
+                .map((block: any) => {
                     if (block.content && Array.isArray(block.content)) {
                         return block.content
-                            .filter(item => item.type === 'text')
-                            .map(item => item.text || '')
+                            .filter((item: any) => item.type === 'text')
+                            .map((item: any) => item.text || '')
                             .join('');
                     }
                     return '';
@@ -60,10 +77,11 @@ export function initWidgetWithData(editorId, config = {}, initialContent = null,
     }
 
     // Change handler
-    const handleChange = (content) => {
+    const handleChange = (content: unknown) => {
         try {
-            textarea.value = JSON.stringify(content || []);
-            textarea.dispatchEvent(new Event('change', { bubbles: true }));
+            const textareaElement = textarea as HTMLTextAreaElement;
+            textareaElement.value = JSON.stringify(content || []);
+            textareaElement.dispatchEvent(new Event('change', { bubbles: true }));
         } catch (error) {
             console.error('Error updating textarea:', error);
         }
@@ -76,9 +94,9 @@ export function initWidgetWithData(editorId, config = {}, initialContent = null,
             config: {
                 ...config,
             },
+            uploadConfig: uploadConfig, // Add the upload config here
             onChange: handleChange,
             readonly: readonly,
-            fallbackValue: fallbackText
         });
 
         const root = createRoot(container);
@@ -87,7 +105,7 @@ export function initWidgetWithData(editorId, config = {}, initialContent = null,
         // Store root for cleanup
         blockNoteRoots.set(editorId, root);
         
-        console.log('BlockNote widget rendered successfully:', editorId);
+        console.log('✅ BlockNote widget rendered successfully:', editorId);
         
     } catch (error) {
         console.error('Critical widget initialization error:', error);
@@ -99,7 +117,7 @@ export function initWidgetWithData(editorId, config = {}, initialContent = null,
                     ⚠️ Editor Initialization Failed
                 </div>
                 <textarea 
-                    placeholder="${config.placeholder || 'Enter your content here...'}"
+                    placeholder="${(config.placeholder as string) || 'Enter your content here...'}"
                     style="width: 100%; min-height: 200px; padding: 12px; border: 1px solid #d1d5db; border-radius: 4px; font-family: system-ui;"
                     oninput="
                         const content = this.value ? [{
