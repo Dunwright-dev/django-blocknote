@@ -5,14 +5,14 @@ const isProduction = process.env.NODE_ENV === 'production'
 export default defineConfig({
   build: {
     lib: {
-      entry: 'src/blocknote.ts', // Changed from .js to .ts
+      entry: './src/blocknote.ts', 
       name: 'DjangoBlockNote',
       fileName: 'blocknote',
       formats: ['iife']
     },
     outDir: '../django_blocknote/static/django_blocknote',
     emptyOutDir: true,
-    target: 'es2022', // Added target for ES2022 support
+    target: 'es2022', 
     rollupOptions: {
       external: [],
       output: {
@@ -23,7 +23,10 @@ export default defineConfig({
             return 'css/[name].[hash][extname]'
           }
           return '[name].[hash][extname]'
-        }
+        },
+        input: {
+        blocknote: './src/blocknote.ts' // Explicitly name the entry
+      }
       }
     },
     sourcemap: !isProduction,

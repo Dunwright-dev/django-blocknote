@@ -32,7 +32,7 @@ def get_vite_asset(asset_name):
 
         # Handle specific asset lookups based on your manifest structure
         match asset_name:
-            case "blocknote.js":
+            case "src/blocknote.ts":
                 js_entry = manifest.get("src/blocknote.ts", {})
                 if file_path := js_entry.get("file", ""):
                     asset_path = f"django_blocknote/{file_path}"
