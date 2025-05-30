@@ -52,7 +52,6 @@ cd ..
 
 # Create demo project
 print_status "Creating demo Django project..."
-
 # Remove existing demo project if it exists
 if [ -d "examples/demo_project" ]; then
     print_warning "Removing existing demo project..."
@@ -86,7 +85,6 @@ chmod +x manage.py
 
 # Create demo project settings
 mkdir -p demo
-
 cat > demo/__init__.py << 'DEMO_INIT_EOF'
 DEMO_INIT_EOF
 
@@ -172,7 +170,6 @@ STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 # Static files configuration for development
-# Include package static to get the new frontend builds
 STATICFILES_DIRS = [
     BASE_DIR / 'static',  # Local demo static files
     BASE_DIR.parent.parent / 'django_blocknote' / 'static',  # Package static files
@@ -270,14 +267,12 @@ import os
 from django.core.wsgi import get_wsgi_application
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'demo.settings')
-
 application = get_wsgi_application()
 WSGI_EOF
 
 # Create blog app
 mkdir -p blog
 mkdir -p blog/migrations
-
 cat > blog/__init__.py << 'BLOG_INIT_EOF'
 BLOG_INIT_EOF
 
@@ -298,16 +293,8 @@ from django_blocknote.fields import BlockNoteField
 
 class BlogPost(models.Model):
     title = models.CharField(max_length=200)
-    summary = BlockNoteField(
-        help_text="Brief summary of the post",
-        blank=True,
-    )
     content = BlockNoteField(
         help_text="Main content of the blog post",
-        blank=True,
-    )
-    notes = BlockNoteField(
-        help_text="Internal notes (for testing multiple editors)",
         blank=True,
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -337,19 +324,8 @@ from .models import BlogPost, Comment
 class BlogPostForm(forms.ModelForm):
     class Meta:
         model = BlogPost
-        fields = ['title', 'summary', 'content', 'notes']
+        fields = ['title', 'content']
         widgets = {
-            'summary': BlockNoteWidget(
-                config={
-                    'placeholder': 'Write a brief summary...',
-                    'theme': 'light',
-                },
-                upload_config={
-                    'uploadUrl': '/django-blocknote/upload-image/',
-                    'maxFileSize': 5 * 1024 * 1024,  # 5MB for summary
-                    'allowedTypes': ['image/jpeg', 'image/png']
-                }
-            ),
             'content': BlockNoteWidget(
                 config={
                     'placeholder': 'Write your blog post content here...',
@@ -358,17 +334,8 @@ class BlogPostForm(forms.ModelForm):
                 },
                 upload_config={
                     'uploadUrl': '/django-blocknote/upload-image/',
-                    'maxFileSize': 10 * 1024 * 1024,  # 10MB for main content
-                    'allowedTypes': ['image/*']  # All image types
-                }
-            ),
-            'notes': BlockNoteWidget(
-                config={
-                    'placeholder': 'Internal notes (private)...',
-                    'theme': 'dark',
-                },
-                upload_config={
-                    'allowedTypes': []  # No uploads for notes
+                    'maxFileSize': 10 * 1024 * 1024,  # 10MB
+                    'allowedTypes': ['image/*']
                 }
             ),
         }
@@ -391,34 +358,100 @@ class CommentForm(forms.ModelForm):
             ),
         }
 
-# Demo form to test different upload configurations
+# Comprehensive upload testing form with all the bells and whistles
 class UploadTestForm(forms.Form):
-    default_upload = forms.CharField(
-        widget=BlockNoteWidget(),  # Uses default settings
-        label="Default Upload Configuration",
-        required=False
-    )
+    """Comprehensive form to test all upload configurations and edge cases"""
     
-    custom_upload = forms.CharField(
+    # Standard configuration
+    standard_editor = forms.CharField(
         widget=BlockNoteWidget(
             upload_config={
                 'uploadUrl': '/django-blocknote/upload-image/',
-                'maxFileSize': 1 * 1024 * 1024,  # 1MB limit
-                'allowedTypes': ['image/jpeg', 'image/png'],
+                'maxFileSize': 5 * 1024 * 1024,  # 5MB
+                'allowedTypes': ['image/jpeg', 'image/png', 'image/webp'],
                 'showProgress': True
             }
         ),
-        label="Custom Upload Configuration (1MB, JPEG/PNG only)",
+        label="Standard Editor (5MB, JPEG/PNG/WebP, Progress)",
+        help_text="Standard upload configuration with common image types",
         required=False
     )
     
-    no_upload = forms.CharField(
+    # Restrictive configuration  
+    restrictive_editor = forms.CharField(
         widget=BlockNoteWidget(
+            config={
+                'placeholder': 'Restrictive upload settings...',
+                'theme': 'light'
+            },
             upload_config={
-                'allowedTypes': []  # Disable uploads
+                'uploadUrl': '/django-blocknote/upload-image/',
+                'maxFileSize': 1 * 1024 * 1024,  # 1MB only
+                'allowedTypes': ['image/jpeg'],  # JPEG only
+                'showProgress': True,
+                'maxConcurrent': 1
             }
         ),
-        label="No Upload Allowed",
+        label="Restrictive Editor (1MB, JPEG only)",
+        help_text="Highly restrictive settings to test file validation",
+        required=False
+    )
+    
+    # Permissive configuration
+    permissive_editor = forms.CharField(
+        widget=BlockNoteWidget(
+            config={
+                'placeholder': 'Permissive upload settings...',
+                'theme': 'dark'
+            },
+            upload_config={
+                'uploadUrl': '/django-blocknote/upload-image/',
+                'maxFileSize': 20 * 1024 * 1024,  # 20MB
+                'allowedTypes': ['image/*'],  # All image types
+                'showProgress': True,
+                'maxConcurrent': 3
+            }
+        ),
+        label="Permissive Editor (20MB, All Images, Dark Theme)",
+        help_text="Generous settings to test large file handling",
+        required=False
+    )
+    
+    # No uploads allowed
+    no_upload_editor = forms.CharField(
+        widget=BlockNoteWidget(
+            config={
+                'placeholder': 'No uploads allowed in this editor...',
+                'theme': 'light'
+            },
+            upload_config={
+                'allowedTypes': []  # No uploads
+            }
+        ),
+        label="No Upload Editor",
+        help_text="Upload functionality completely disabled",
+        required=False
+    )
+    
+    # Multiple editors to test form validation
+    editor_1 = forms.CharField(
+        widget=BlockNoteWidget(),
+        label="Multi-Editor Test 1",
+        help_text="First editor in multi-editor form",
+        required=False
+    )
+    
+    editor_2 = forms.CharField(
+        widget=BlockNoteWidget(),
+        label="Multi-Editor Test 2", 
+        help_text="Second editor in multi-editor form",
+        required=False
+    )
+    
+    editor_3 = forms.CharField(
+        widget=BlockNoteWidget(),
+        label="Multi-Editor Test 3",
+        help_text="Third editor in multi-editor form",
         required=False
     )
 FORMS_EOF
@@ -487,18 +520,19 @@ def post_edit(request, pk):
     })
 
 def upload_test(request):
-    """Test page for different upload configurations"""
+    """Comprehensive test page for upload configurations and edge cases"""
     if request.method == 'POST':
         form = UploadTestForm(request.POST)
         if form.is_valid():
-            messages.success(request, 'Upload test form submitted successfully!')
+            messages.success(request, 'Upload test form submitted successfully! All editors passed validation.')
             # In a real app, you'd process the form data here
+            return redirect('upload_test')
     else:
         form = UploadTestForm()
     
     return render(request, 'blog/upload_test.html', {
         'form': form,
-        'title': 'Upload Configuration Test'
+        'title': 'Upload Configuration Testing'
     })
 VIEWS_EOF
 
@@ -535,6 +569,7 @@ ADMIN_EOF
 # Create templates
 mkdir -p templates/blog
 
+# Updated base template with integrated validation
 cat > templates/base.html << 'BASE_TEMPLATE_EOF'
 {% load blocknote_tags %}
 <!DOCTYPE html>
@@ -556,6 +591,16 @@ cat > templates/base.html << 'BASE_TEMPLATE_EOF'
             color: #6c757d;
             margin-top: 0.25rem;
         }
+        .feature-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            margin: 0.125rem;
+            background: #e3f2fd;
+            color: #1565c0;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
     </style>
     {% blocknote_full %}
     {% blocknote_asset_debug %}
@@ -566,7 +611,7 @@ cat > templates/base.html << 'BASE_TEMPLATE_EOF'
             <a class="navbar-brand" href="{% url 'post_list' %}">Django BlockNote Demo</a>
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="{% url 'post_create' %}">New Post</a>
-                <a class="nav-link" href="{% url 'upload_test' %}">Upload Test</a>
+                <a class="nav-link" href="{% url 'upload_test' %}">Upload Testing</a>
                 <a class="nav-link" href="/admin/">Admin</a>
             </div>
         </div>
@@ -591,6 +636,7 @@ cat > templates/base.html << 'BASE_TEMPLATE_EOF'
 </html>
 BASE_TEMPLATE_EOF
 
+# Simple post list template
 cat > templates/blog/post_list.html << 'POST_LIST_EOF'
 {% extends 'base.html' %}
 {% load blocknote_tags %}
@@ -609,10 +655,10 @@ cat > templates/blog/post_list.html << 'POST_LIST_EOF'
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">{{ post.title }}</h5>
-                    {% if post.summary %}
-                      <div class="card-text">
-                        {% blocknote_viewer post.summary %}
-                      </div>
+                    {% if post.content %}
+                        <div class="card-text">
+                            {% blocknote_viewer post.content %}
+                        </div>
                     {% endif %}
                     <p class="text-muted small">{{ post.created_at|date:"F d, Y" }}</p>
                     <div class="d-flex gap-2">
@@ -625,9 +671,9 @@ cat > templates/blog/post_list.html << 'POST_LIST_EOF'
     {% empty %}
         <div class="col-12">
             <div class="alert alert-info">
-                <h4>No posts yet!</h4>
-                <p>Start by <a href="{% url 'post_create' %}">creating your first blog post</a> to test the BlockNote editor with image uploads.</p>
-                <p>Or try the <a href="{% url 'upload_test' %}">upload test page</a> to see different upload configurations.</p>
+                <h4>Welcome to Django BlockNote! 🎉</h4>
+                <p>Start by <a href="{% url 'post_create' %}">creating your first blog post</a> to see the BlockNote editor in action.</p>
+                <p>Or explore the <a href="{% url 'upload_test' %}">upload testing page</a> to see different configuration options.</p>
             </div>
         </div>
     {% endfor %}
@@ -635,6 +681,7 @@ cat > templates/blog/post_list.html << 'POST_LIST_EOF'
 {% endblock %}
 POST_LIST_EOF
 
+# Simple post detail template
 cat > templates/blog/post_detail.html << 'POST_DETAIL_EOF'
 {% extends 'base.html' %}
 {% load blocknote_tags %}
@@ -647,13 +694,6 @@ cat > templates/blog/post_detail.html << 'POST_DETAIL_EOF'
         <article>
             <h1>{{ post.title }}</h1>
             <p class="text-muted">{{ post.created_at|date:"F d, Y" }}</p>
-            
-           {% if post.summary %}
-                <div class="alert alert-light">
-                    <strong>Summary:</strong> 
-                    {% blocknote_viewer post.summary %}
-                </div>
-            {% endif %}
             
             <div class="mt-4">
                 {% blocknote_viewer post.content %}
@@ -702,20 +742,19 @@ cat > templates/blog/post_detail.html << 'POST_DETAIL_EOF'
     <div class="col-lg-4">
         <div class="card">
             <div class="card-header">
-                <h5>Upload Features</h5>
+                <h5>About This Demo</h5>
             </div>
             <div class="card-body">
                 <p><strong>This demo shows:</strong></p>
                 <ul class="small">
-                    <li>📸 Image uploads in editors</li>
-                    <li>⚙️ Different upload configurations</li>
-                    <li>🎨 Multiple editor themes</li>
-                    <li>📝 Form integration</li>
-                    <li>🔒 Upload restrictions</li>
+                    <li>📝 Simple blog post creation</li>
+                    <li>👁️ Read-only content viewing</li>
+                    <li>💬 Comment system with uploads</li>
+                    <li>🔄 Form validation (multi-editor)</li>
                 </ul>
                 <div class="mt-3">
                     <a href="{% url 'upload_test' %}" class="btn btn-sm btn-outline-primary">
-                        Test Upload Configs
+                        Advanced Upload Testing
                     </a>
                 </div>
             </div>
@@ -725,6 +764,7 @@ cat > templates/blog/post_detail.html << 'POST_DETAIL_EOF'
 {% endblock %}
 POST_DETAIL_EOF
 
+# Simple post form template
 cat > templates/blog/post_form.html << 'POST_FORM_EOF'
 {% extends 'base.html' %}
 
@@ -745,32 +785,12 @@ cat > templates/blog/post_form.html << 'POST_FORM_EOF'
             </div>
             
             <div class="mb-3">
-                <label for="{{ form.summary.id_for_label }}" class="form-label">Summary</label>
-                <div class="form-text">{{ form.summary.help_text }}</div>
-                <div class="upload-info">💡 Upload: max 5MB, JPEG/PNG only</div>
-                {{ form.summary }}
-                {% if form.summary.errors %}
-                    <div class="text-danger small">{{ form.summary.errors }}</div>
-                {% endif %}
-            </div>
-            
-            <div class="mb-3">
                 <label for="{{ form.content.id_for_label }}" class="form-label">Content</label>
                 <div class="form-text">{{ form.content.help_text }}</div>
-                <div class="upload-info">💡 Upload: max 10MB, all image types</div>
+                <div class="upload-info">💡 Upload: max 10MB, all image types supported</div>
                 {{ form.content }}
                 {% if form.content.errors %}
                     <div class="text-danger small">{{ form.content.errors }}</div>
-                {% endif %}
-            </div>
-            
-            <div class="mb-3">
-                <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
-                <div class="form-text">{{ form.notes.help_text }}</div>
-                <div class="upload-info">💡 No uploads allowed (for security)</div>
-                {{ form.notes }}
-                {% if form.notes.errors %}
-                    <div class="text-danger small">{{ form.notes.errors }}</div>
                 {% endif %}
             </div>
             
@@ -784,18 +804,22 @@ cat > templates/blog/post_form.html << 'POST_FORM_EOF'
     <div class="col-lg-4">
         <div class="card">
             <div class="card-header">
-                <h5>Upload Configuration</h5>
+                <h5>Simple Post Creation</h5>
             </div>
             <div class="card-body">
-                <p><strong>Each editor demonstrates different upload settings:</strong></p>
+                <p>This is a clean, simple blog post form with:</p>
                 <ul class="small">
-                    <li><strong>Summary:</strong> 5MB limit, JPEG/PNG only</li>
-                    <li><strong>Content:</strong> 10MB limit, all image types</li>
-                    <li><strong>Notes:</strong> No uploads (disabled)</li>
+                    <li>📝 Rich text editing</li>
+                    <li>📸 Image uploads (10MB limit)</li>
+                    <li>✅ Automatic form validation</li>
+                    <li>👁️ Read-only viewing after save</li>
                 </ul>
-                <p class="small text-muted mt-3">
-                    This shows how you can customize upload behavior per field in your forms.
-                </p>
+                <div class="mt-3">
+                    <p class="small text-muted">
+                        For advanced upload testing and multiple editor configurations, 
+                        visit the <a href="{% url 'upload_test' %}">Upload Testing page</a>.
+                    </p>
+                </div>
             </div>
         </div>
     </div>
@@ -803,6 +827,7 @@ cat > templates/blog/post_form.html << 'POST_FORM_EOF'
 {% endblock %}
 POST_FORM_EOF
 
+# Comprehensive upload test template with all the bells and whistles
 cat > templates/blog/upload_test.html << 'UPLOAD_TEST_EOF'
 {% extends 'base.html' %}
 
@@ -810,72 +835,214 @@ cat > templates/blog/upload_test.html << 'UPLOAD_TEST_EOF'
 
 {% block content %}
 <div class="row">
-    <div class="col-lg-8">
+    <div class="col-12">
         <h1>{{ title }}</h1>
-        <p class="lead">Test different upload configurations to see how they work.</p>
+        <p class="lead">Comprehensive testing of upload configurations, validation, and edge cases.</p>
+        
+        <div class="alert alert-info">
+            <h5>🧪 What This Page Tests</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <span class="feature-badge">Multi-Editor Forms</span>
+                    <span class="feature-badge">JSON Validation</span>
+                    <span class="feature-badge">Theme Variations</span>
+                    <span class="feature-badge">Error Handling</span>
+                </div>
+            </div>
+        </div>
         
         <form method="post">
             {% csrf_token %}
             
-            <div class="mb-4">
-                <label for="{{ form.default_upload.id_for_label }}" class="form-label">
-                    {{ form.default_upload.label }}
-                </label>
-                <div class="upload-info">💡 Uses default settings: 10MB max, all image types</div>
-                {{ form.default_upload }}
+            <!-- Standard Editor -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>📝 Standard Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <label for="{{ form.standard_editor.id_for_label }}" class="form-label">
+                        {{ form.standard_editor.label }}
+                    </label>
+                    <div class="upload-info">{{ form.standard_editor.help_text }}</div>
+                    {{ form.standard_editor }}
+                </div>
             </div>
             
-            <div class="mb-4">
-                <label for="{{ form.custom_upload.id_for_label }}" class="form-label">
-                    {{ form.custom_upload.label }}
-                </label>
-                <div class="upload-info">💡 Custom: 1MB max, JPEG/PNG only, with progress</div>
-                {{ form.custom_upload }}
+            <!-- Restrictive Editor -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>🔒 Restrictive Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <label for="{{ form.restrictive_editor.id_for_label }}" class="form-label">
+                        {{ form.restrictive_editor.label }}
+                    </label>
+                    <div class="upload-info">{{ form.restrictive_editor.help_text }}</div>
+                    {{ form.restrictive_editor }}
+                </div>
             </div>
             
-            <div class="mb-4">
-                <label for="{{ form.no_upload.id_for_label }}" class="form-label">
-                    {{ form.no_upload.label }}
-                </label>
-                <div class="upload-info">💡 Uploads completely disabled</div>
-                {{ form.no_upload }}
+            <!-- Permissive Editor -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>🌈 Permissive Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <label for="{{ form.permissive_editor.id_for_label }}" class="form-label">
+                        {{ form.permissive_editor.label }}
+                    </label>
+                    <div class="upload-info">{{ form.permissive_editor.help_text }}</div>
+                    {{ form.permissive_editor }}
+                </div>
             </div>
             
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">Submit Test</button>
+            <!-- No Upload Editor -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>🚫 No Upload Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <label for="{{ form.no_upload_editor.id_for_label }}" class="form-label">
+                        {{ form.no_upload_editor.label }}
+                    </label>
+                    <div class="upload-info">{{ form.no_upload_editor.help_text }}</div>
+                    {{ form.no_upload_editor }}
+                </div>
+            </div>
+            
+            <!-- Multi-Editor Validation Test -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>🔄 Multi-Editor Form Validation Test</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Test the automatic JSON validation with multiple editors. Try editing only one and submitting the form.</p>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.editor_1.id_for_label }}" class="form-label">
+                                {{ form.editor_1.label }}
+                            </label>
+                            <div class="upload-info">{{ form.editor_1.help_text }}</div>
+                            {{ form.editor_1 }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.editor_2.id_for_label }}" class="form-label">
+                                {{ form.editor_2.label }}
+                            </label>
+                            <div class="upload-info">{{ form.editor_2.help_text }}</div>
+                            {{ form.editor_2 }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.editor_3.id_for_label }}" class="form-label">
+                                {{ form.editor_3.label }}
+                            </label>
+                            <div class="upload-info">{{ form.editor_3.help_text }}</div>
+                            {{ form.editor_3 }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2 mb-4">
+                <button type="submit" class="btn btn-primary">Submit All Tests</button>
                 <a href="{% url 'post_list' %}" class="btn btn-outline-secondary">Back to Posts</a>
+                <button type="button" class="btn btn-outline-info" onclick="window.location.reload()">Reset Form</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Testing Instructions Sidebar -->
+<div class="row mt-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>🧪 Testing Instructions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>File Size Testing:</h6>
+                        <ol class="small">
+                            <li>Try uploading a 2MB image to the restrictive editor (should fail)</li>
+                            <li>Try uploading a 15MB image to the permissive editor (should work)</li>
+                            <li>Upload the same file to different editors</li>
+                        </ol>
+                        
+                        <h6>File Type Testing:</h6>
+                        <ol class="small">
+                            <li>Try uploading PNG to JPEG-only editor (should fail)</li>
+                            <li>Try uploading WebP to permissive editor (should work)</li>
+                            <li>Try uploading non-image files</li>
+                        </ol>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Form Validation Testing:</h6>
+                        <ol class="small">
+                            <li>Add content to only ONE multi-editor field</li>
+                            <li>Submit the form (should not get JSON errors)</li>
+                            <li>Check browser console for validation logs</li>
+                        </ol>
+                        
+                        <h6>Theme & UI Testing:</h6>
+                        <ol class="small">
+                            <li>Notice the dark theme on permissive editor</li>
+                            <li>Test drag-and-drop uploads</li>
+                            <li>Watch upload progress indicators</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     
     <div class="col-lg-4">
         <div class="card">
             <div class="card-header">
-                <h5>Testing Instructions</h5>
+                <h5>📊 Quick Reference</h5>
             </div>
             <div class="card-body">
-                <ol class="small">
-                    <li>Try uploading images to each editor</li>
-                    <li>Test different file sizes and types</li>
-                    <li>Check browser console for upload logs</li>
-                   <li>Notice the different behaviors</li>
-               </ol>
-               
-               <h6 class="mt-3">Expected Behavior:</h6>
-               <ul class="small">
-                   <li><strong>Default:</strong> Large images work</li>
-                   <li><strong>Custom:</strong> Only small JPEG/PNG</li>
-                   <li><strong>No Upload:</strong> No upload button/drag</li>
-               </ul>
-               
-               <div class="alert alert-info mt-3">
-                   <small>
-                       <strong>💡 Tip:</strong> Open browser dev tools to see upload progress and any errors.
-                   </small>
-               </div>
-           </div>
-       </div>
-   </div>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Editor</th>
+                            <th>Max Size</th>
+                            <th>Types</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Standard</td>
+                            <td>5MB</td>
+                            <td>JPEG/PNG/WebP</td>
+                        </tr>
+                        <tr>
+                            <td>Restrictive</td>
+                            <td>1MB</td>
+                            <td>JPEG only</td>
+                        </tr>
+                        <tr>
+                            <td>Permissive</td>
+                            <td>20MB</td>
+                            <td>All images</td>
+                        </tr>
+                        <tr>
+                            <td>No Upload</td>
+                            <td>-</td>
+                            <td>None</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="alert alert-info mt-3">
+                    <small>
+                        <strong>💡 Tip:</strong> Open browser dev tools to see detailed upload logs and validation messages.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 UPLOAD_TEST_EOF
@@ -891,7 +1058,6 @@ print_success "Demo project created successfully!"
 # Set up database
 print_status "Setting up database..."
 cd examples/demo_project
-
 python manage.py makemigrations || {
    print_error "Failed to run makemigrations"
    exit 1
@@ -911,6 +1077,58 @@ python manage.py collectstatic --noinput || {
 print_status "Creating superuser (admin/admin)..."
 echo "from django.contrib.auth.models import User; User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin', 'admin@example.com', 'admin')" | python manage.py shell
 
+# Create sample data
+print_status "Creating sample blog post..."
+cat > create_sample_data.py << 'SAMPLE_DATA_EOF'
+import os
+import django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'demo.settings')
+django.setup()
+
+from blog.models import BlogPost
+
+# Create sample blog post with proper BlockNote content
+sample_content = [
+    {
+        "id": "welcome-1",
+        "type": "paragraph",
+        "props": {},
+        "content": [{"type": "text", "text": "Welcome to the Django BlockNote demo! 🎉"}],
+        "children": []
+    },
+    {
+        "id": "welcome-2", 
+        "type": "paragraph",
+        "props": {},
+        "content": [
+            {"type": "text", "text": "This sample post demonstrates the "},
+            {"type": "text", "text": "read-only viewer", "styles": {"bold": True}},
+            {"type": "text", "text": " functionality. You can edit this post to test the editor."}
+        ],
+        "children": []
+    },
+    {
+        "id": "welcome-3",
+        "type": "paragraph", 
+        "props": {},
+        "content": [{"type": "text", "text": "Try creating new posts, adding comments, and testing the upload functionality!"}],
+        "children": []
+    }
+]
+
+if not BlogPost.objects.filter(title="Welcome to Django BlockNote").exists():
+    post = BlogPost.objects.create(
+        title="Welcome to Django BlockNote",
+        content=sample_content
+    )
+    print(f"Created sample post: {post.title}")
+else:
+    print("Sample post already exists")
+SAMPLE_DATA_EOF
+
+python create_sample_data.py
+rm create_sample_data.py
+
 # Create media directory
 print_status "Creating media directory for uploads..."
 mkdir -p media/blocknote_uploads
@@ -918,23 +1136,36 @@ mkdir -p media/blocknote_uploads
 cd ../..
 
 print_success "Development environment ready!"
-
 echo ""
-echo "🚀 To start development:"
-echo "  1. Terminal 1: cd frontend && npm run watch"  
-echo "  2. Terminal 2: cd examples/demo_project && python manage.py runserver"
-echo "  3. Visit: http://127.0.0.1:8000"
-echo "  4. Admin: http://127.0.0.1:8000/admin (admin/admin)"
-echo "  5. Upload Test: http://127.0.0.1:8000/upload-test/"
+echo "🚀 Quick Start:"
+echo "  ./dev-start.sh"
 echo ""
-echo "🔧 Key Features to Test:"
-echo "  • Create new blog posts with image uploads"
-echo "  • Try different file sizes and types"
-echo "  • Check upload restrictions per editor"
-echo "  • View uploaded images in posts"
-echo "  • Test comment uploads (2MB limit)"
+echo "This convenience script starts both Django server and npm watch mode."
+echo ""
+echo "📍 Visit: http://127.0.0.1:8000"
+echo "🔑 Admin: http://127.0.0.1:8000/admin (admin/admin)"
+echo ""
+echo "📖 Key Pages:"
+echo "  • Create Post: http://127.0.0.1:8000/post/new/"
+echo "  • Upload Testing: http://127.0.0.1:8000/upload-test/"
+echo ""
+echo "🛠️  Manual Setup (if needed):"
+echo "  Terminal 1: cd frontend && npm run watch"
+echo "  Terminal 2: cd examples/demo_project && python manage.py runserver"
+echo ""
+echo "🔧 What's Been Fixed:"
+echo "  • ✅ Viewer initialization for readonly content display"
+echo "  • ✅ 'Enter a valid JSON' errors on multi-editor forms"
+echo "  • ✅ Automatic form validation via template tags"
+echo "  • ✅ Separated simple posts from advanced testing"
+echo ""
+echo "🧪 Upload Testing Features:"
+echo "  • Different file size limits (1MB to 20MB)"
+echo "  • File type restrictions (JPEG-only to all images)"  
+echo "  • Multiple upload configurations on one page"
+echo "  • Multi-editor form validation testing"
+echo "  • Theme variations (light/dark)"
+echo "  • Progress indicators and error handling"
 echo ""
 echo "📁 Uploaded files go to: examples/demo_project/media/blocknote_uploads/"
 echo ""
-echo "Or use the convenience script:"
-echo "  ./dev-start.sh"

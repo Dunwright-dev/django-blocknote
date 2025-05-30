@@ -1,7 +1,9 @@
-# Demo project
-examples/demo_project/db.sqlite3
-examples/demo_project/staticfiles/
-examples/demo_project/*.log
+# Project files
+*/.vite/*
+examples/*
+
+# Built static assets (these are generated)
+django_blocknote/static/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -277,10 +279,6 @@ frontend/temp/
 
 # Webpack bundle analyzer
 frontend/webpack-stats.json
-
-# Built static assets (these are generated)
-django_blocknote/static/django_blocknote/js/
-django_blocknote/static/django_blocknote/css/
 
 # Editor/IDE files
 .vscode/
