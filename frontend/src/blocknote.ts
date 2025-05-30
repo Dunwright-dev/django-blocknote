@@ -1,23 +1,61 @@
 import '@blocknote/core/fonts/inter.css';
 import '@blocknote/mantine/style.css';
-import './styles/blocknote.css'; // Import your CSS file directly
+import './styles/blocknote.css';
 
-// Import the functionality we want to expose
-import { scanForWidgets } from './core/dom-scanner.js';
-import { initWidgetWithData, blockNoteRoots } from './core/widget-manager.js';
-import { checkReady } from './utils/helpers.js';
+// Import with proper TypeScript paths
+import { scanForWidgets } from './core/dom-scanner';
+import { initWidgetWithData, blockNoteRoots } from './core/widget-manager';
+import { checkReady } from './utils/helpers';
 
 console.log('Loading BlockNote 0.31.0 with React 19 (HTMX compatible)...');
 console.log('🚀 BlockNote script started loading');
 console.log('React available at start:', typeof React !== 'undefined');
 console.log('ReactDOM available at start:', typeof ReactDOM !== 'undefined');
 
-// Simple state management
-let isReady = false;
-let pendingWidgets = [];
+// TypeScript interfaces
+interface WidgetData {
+    editorId: string;
+    config: Record<string, unknown>;
+    initialContent: unknown;
+    readonly: boolean;
+}
+
+interface HTMXEvent extends Event {
+    detail: {
+        target?: Element;
+        elt?: Element;
+    };
+}
+
+interface DjangoBlockNoteAPI {
+    scanForWidgets: (rootElement?: Document | Element) => void;
+    initWidget: (
+        editorId: string, 
+        config: Record<string, unknown>, 
+        initialContent: unknown, 
+        readonly: boolean
+    ) => void;
+    blockNoteRoots: Map<string, unknown>;
+}
+
+// Extend Window interface
+declare global {
+    interface Window {
+        DjangoBlockNote: DjangoBlockNoteAPI;
+    }
+}
+
+// Simple state management with types
+let isReady: boolean = false;
+let pendingWidgets: WidgetData[] = [];
 
 // Initialize a widget immediately or queue it
-function initWidget(editorId, config, initialContent, readonly) {
+function initWidget(
+    editorId: string, 
+    config: Record<string, unknown>, 
+    initialContent: unknown, 
+    readonly: boolean
+): void {
     if (checkReady()) {
         console.log('✅ Initializing BlockNote widget immediately:', editorId);
         initWidgetWithData(editorId, config, initialContent, readonly);
@@ -28,10 +66,10 @@ function initWidget(editorId, config, initialContent, readonly) {
 }
 
 // Process all pending widgets
-function processPending() {
+function processPending(): void {
     if (checkReady() && pendingWidgets.length > 0) {
         console.log('🚀 Processing', pendingWidgets.length, 'pending widgets');
-        pendingWidgets.forEach(widget => {
+        pendingWidgets.forEach((widget: WidgetData) => {
             initWidgetWithData(widget.editorId, widget.config, widget.initialContent, widget.readonly);
         });
         pendingWidgets = [];
@@ -40,12 +78,12 @@ function processPending() {
 }
 
 // Wrapper function that passes initWidget callback to scanForWidgets
-function scanForWidgetsWithInit(rootElement = document) {
+function scanForWidgetsWithInit(rootElement: Document | Element = document): void {
     scanForWidgets(rootElement, initWidget);
 }
 
 // Initialize when dependencies are loaded
-function initBlockNote() {
+function initBlockNote(): void {
     if (checkReady()) {
         processPending();
         scanForWidgetsWithInit();
@@ -62,15 +100,19 @@ if (document.readyState === 'loading') {
 }
 
 // HTMX integration - scan for new widgets after HTMX swaps content
-document.addEventListener('htmx:afterSwap', function(event) {
+document.addEventListener('htmx:afterSwap', function(event: HTMXEvent): void {
     console.log('🔄 HTMX content swapped, scanning for new BlockNote widgets');
-    scanForWidgetsWithInit(event.detail.target);
+    if (event.detail.target) {
+        scanForWidgetsWithInit(event.detail.target);
+    }
 });
 
 // Also handle htmx:load for broader compatibility
-document.addEventListener('htmx:load', function(event) {
+document.addEventListener('htmx:load', function(event: HTMXEvent): void {
     console.log('📥 HTMX content loaded, scanning for BlockNote widgets');
-    scanForWidgetsWithInit(event.detail.elt);
+    if (event.detail.elt) {
+        scanForWidgetsWithInit(event.detail.elt);
+    }
 });
 
 // PUBLIC API - This is all that gets exposed globally

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
+import { useBlockNoteUpload } from '../hooks';
 
 // Main BlockNote Editor Component
 export function BlockNoteEditor({ 
@@ -8,35 +9,46 @@ export function BlockNoteEditor({
     initialContent, 
     config = {}, 
     onChange = null, 
-    readonly = false
+    readonly = false,
+    uploadConfig = {} // Configuration for upload hook
+}: {
+    editorId: string;
+    initialContent?: any;
+    config?: Record<string, unknown>;
+    onChange?: ((content: any) => void) | null;
+    readonly?: boolean;
+    uploadConfig?: Record<string, unknown>; // Add this type
 }) {
     console.log('Creating BlockNote 0.31.0 editor...');
+    
+    // Use our custom upload hook
+    const { uploadFile } = useBlockNoteUpload(uploadConfig);
+    
     // State to track readonly status
     const [isReadonly, setIsReadonly] = React.useState(readonly);
     
-    // Create editor with v0.31.0 API
+    // Create editor with upload configuration
     const editor = useCreateBlockNote({
         initialContent: initialContent || undefined,
         ...config,
+        // Use the upload function from our hook, allow override
+        uploadFile: config.uploadFile || uploadFile,
         ...(config.isEditable === undefined && { isEditable: !isReadonly })
     });
-
+    
     // Effect to watch for data-readonly changes
     React.useEffect(() => {
         if (!editorId) return;
-        
         const container = document.querySelector(`[data-editor-id="${editorId}"]`);
         if (!container) return;
-
+        
         // Set up MutationObserver to watch for attribute changes
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'data-readonly') {
-                    const newReadonlyValue = container.dataset.readonly === "true";
+                    const newReadonlyValue = container.getAttribute('data-readonly') === "true";
                     console.log(`Readonly state changed for ${editorId}:`, newReadonlyValue);
-                    
                     setIsReadonly(newReadonlyValue);
-                    
                     // Update editor editable state
                     if (editor) {
                         editor.isEditable = !newReadonlyValue;
@@ -44,27 +56,26 @@ export function BlockNoteEditor({
                 }
             });
         });
-
+        
         // Start observing
         observer.observe(container, {
             attributes: true,
             attributeFilter: ['data-readonly']
         });
-
-         // Cleanup observer on unmount
+         
+        // Cleanup observer on unmount
         return () => {
             observer.disconnect();
         };
     }, [editor, editorId]);
-
-    // Handle content changes - Fixed syntax
+    
+    // Handle content changes
     const handleChange = React.useCallback(() => {
-        const isEditable = config.editable !== undefined ? config.editable : !readonly;
+        const isEditable = config.isEditable !== undefined ? config.isEditable : !readonly;
         if (onChange && isEditable && editor) {
             try {
                 const content = editor.document;
                 onChange(content);
-                
                 document.dispatchEvent(new CustomEvent('blocknote-change', {
                     detail: { content, editor }
                 }));
@@ -72,11 +83,11 @@ export function BlockNoteEditor({
                 console.warn('Error getting editor content:', error);
             }
         }
-    }, [onChange, readonly, editor, config.editable]);
-
+    }, [onChange, readonly, editor, config.isEditable]);
+    
     // Use config.editable if available, otherwise fall back to !readonly
     const isEditable = config.isEditable !== undefined ? config.isEditable : !readonly;
-
+    
     return React.createElement(BlockNoteView, { 
         editor,
         editable: isEditable,
