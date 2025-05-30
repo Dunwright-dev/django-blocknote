@@ -57,6 +57,7 @@ dev = [
     "pytest-cov",
     "pytest-randomly",
     "pytest-xdist",
+    "ruff",
     "tblib",
     'tox',
     "twine",
