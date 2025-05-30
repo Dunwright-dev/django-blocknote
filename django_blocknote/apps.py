@@ -1,5 +1,9 @@
+import logging
+
 from django.apps import AppConfig
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 class DjangoBlockNoteConfig(AppConfig):
@@ -9,7 +13,176 @@ class DjangoBlockNoteConfig(AppConfig):
 
     def ready(self):
         """Configure BlockNote settings with intelligent defaults."""
+        if not hasattr(settings, "DJ_BN_BULK_CREATE_BATCH_SIZE"):
+            settings.DJ_BN_BULK_CREATE_BATCH_SIZE: int = 50  # type: ignore[attr-defined]
+        if not hasattr(settings, "DJ_BN_IMAGE_DELETION"):
+            settings.DJ_BN_IMAGE_DELETION: bool = True  # type: ignore[attr-defined]
+        if not hasattr(settings, "DJ_BN_PERMITTED_IMAGE_TYPES"):
+            settings.DJ_BN_PERMITTED_IMAGE_TYPES: list[str] = [  # type: ignore[attr-defined]
+                "jpg",
+                "jpeg",
+                "png",
+                "gif",
+                "bmp",
+                "webp",
+                "tiff",
+            ]
+        if not hasattr(settings, "DJ_BN_IMAGE_FORMATTER"):
+            settings.DJ_BN_IMAGE_FORMATTER = (
+                "django_ckeditors.image.convert_image_to_webp"
+            )
+        if not hasattr(settings, "DJ_BN_IMAGE_URL_HANDLER"):
+            settings.DJ_BN_IMAGE_URL_HANDLER: str = ""  # type: ignore[attr-defined]
+
+        if not hasattr(settings, "DJ_BN_FORMAT_IMAGE"):
+            settings.DJ_BN_FORMAT_IMAGE = True  # False: keep original formt and name.
+
+        if not hasattr(settings, "DJ_BN_STAFF_ONLY_IMAGE_UPLOADS"):
+            settings.DJ_BN_STAFF_ONLY_IMAGE_UPLOADS: bool = False  # type: ignore[attr-defined]
+
+        if not hasattr(settings, "DJ_BN_MAX_FILE_SIZE"):
+            settings.DJ_BN_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+        if not hasattr(settings, "DJ_BN_UPLOAD_PATH"):
+            settings.DJ_BN_UPLOAD_PATH = (
+                "blocknote_uploads"  # Directory within MEDIA_ROOT
+            )
+
+        # Allowed image types
+        if not hasattr(settings, "DJ_BN_ALLOWED_FILE_TYPES"):
+            settings.DJ_BN_ALLOWED_FILE_TYPES = [
+                "image/jpeg",
+                "image/png",
+                "image/gif",
+                "image/webp",
+            ]
+
+        # Allowed document types (for file uploads)
+        if not hasattr(settings, "DJ_BN_ALLOWED_DOCUMENT_TYPES"):
+            settings.DJ_BN_ALLOWED_DOCUMENT_TYPES = [
+                "application/pdf",
+                "application/msword",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "text/plain",
+            ]
+
         self._configure_blocknote_settings()
+
+    #     try:
+    #         self._enhance_admin_classes()
+    #     except Exception as e:
+    #         logger.warning(f"Failed to enhance admin classes: {e}")
+    #
+    # def _enhance_admin_classes(self):
+    #     try:
+    #         from django.contrib import admin
+    #         from django.apps import apps
+    #         from django.utils.html import format_html
+    #         from django.template import Context, Template
+    #         from .fields import BlockNoteField
+    #
+    #         # Find all models with BlockNote fields
+    #         for model in apps.get_models():
+    #             blocknote_fields = [
+    #                 field.name
+    #                 for field in model._meta.get_fields()
+    #                 if isinstance(field, BlockNoteField)
+    #             ]
+    #
+    #             if blocknote_fields and model in admin.site._registry:
+    #                 logger.info(
+    #                     f"Enhancing admin for {model.__name__} with BlockNote fields: {blocknote_fields}"
+    #                 )
+    #
+    #                 # Get current admin class
+    #                 current_admin = admin.site._registry[model]
+    #                 admin_class = current_admin.__class__
+    #
+    #                 # Create enhanced admin class
+    #                 class EnhancedBlockNoteAdmin(admin_class):
+    #                     def __init__(self, model, admin_site):
+    #                         super().__init__(model, admin_site)
+    #                         self._setup_blocknote_previews()
+    #
+    #                     class Media:
+    #                         # Merge with existing media if it exists
+    #                         existing_media = getattr(admin_class, "Media", None)
+    #                         if existing_media:
+    #                             css = getattr(existing_media, "css", {})
+    #                             js = list(getattr(existing_media, "js", []))
+    #                             # Add BlockNote assets
+    #                             css.setdefault("all", []).append(
+    #                                 "django_blocknote/css/blocknote.css"
+    #                             )
+    #                             js.append("django_blocknote/js/blocknote.js")
+    #                         else:
+    #                             css = {"all": ("django_blocknote/css/blocknote.css",)}
+    #                             js = ("django_blocknote/js/blocknote.js",)
+    #
+    #                     def _setup_blocknote_previews(self):
+    #                         """Add preview fields for BlockNote fields"""
+    #                         preview_fields = []
+    #
+    #                         for field_name in blocknote_fields:
+    #                             preview_method_name = f"{field_name}_preview"
+    #                             preview_fields.append(preview_method_name)
+    #
+    #                             # Create the preview method
+    #                             def make_preview_method(fname):
+    #                                 def preview_method(admin_self, obj):
+    #                                     try:
+    #                                         content = getattr(obj, fname, None)
+    #                                         if content:
+    #                                             # Include BlockNote assets and render
+    #                                             template_str = """
+    #                                             {% load blocknote_tags %}
+    #                                             {% blocknote_full %}
+    #                                             {% blocknote_viewer content %}
+    #                                             """
+    #                                             template = Template(template_str)
+    #                                             context = Context({"content": content})
+    #                                             rendered = template.render(context)
+    #                                             return format_html(rendered)
+    #                                         else:
+    #                                             return format_html(
+    #                                                 '<em style="color: #999;">No content</em>'
+    #                                             )
+    #                                     except Exception as e:
+    #                                         logger.error(
+    #                                             f"Error rendering BlockNote preview for {fname}: {e}"
+    #                                         )
+    #                                         return format_html(
+    #                                             '<em style="color: #d32f2f;">Error rendering preview</em>'
+    #                                         )
+    #
+    #                                 preview_method.short_description = (
+    #                                     f"{fname.replace('_', ' ').title()} Preview"
+    #                                 )
+    #                                 return preview_method
+    #
+    #                             # Add the method to the class
+    #                             setattr(
+    #                                 EnhancedBlockNoteAdmin,
+    #                                 preview_method_name,
+    #                                 make_preview_method(field_name),
+    #                             )
+    #
+    #                         # Add preview fields to readonly_fields
+    #                         existing_readonly = list(
+    #                             getattr(self, "readonly_fields", [])
+    #                         )
+    #                         self.readonly_fields = tuple(
+    #                             existing_readonly + preview_fields
+    #                         )
+    #
+    #                 # Re-register with enhanced admin
+    #                 admin.site.unregister(model)
+    #                 admin.site.register(model, EnhancedBlockNoteAdmin)
+    #     except ImportError:
+    #         logger.info("Django admin not available, skipping admin enhancement")
+    #     except Exception as e:
+    #         logger.error(f"Error in admin enhancement: {e}")
+    #         # Don't break the app if admin enhancement fails
 
     def _configure_blocknote_settings(self):
         """Set up BlockNote-specific settings with defaults."""
