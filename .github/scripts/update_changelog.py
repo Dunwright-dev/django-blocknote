@@ -50,11 +50,12 @@ class ChangelogEntry:
         Returns:
             str: The formatted entry.
         """
-        entry = f"- {'BREAKING: ' if self.breaking else ''}{self.description} ({self.scope}) #{self.pr}"
+        repo = os.getenv("GITHUB_REPOSITORY", "")
+        entry = f"- {'BREAKING: ' if self.breaking else ''}{self.description} ({self.scope}) [#{self.pr}](https://github.com/{repo}/pull/{self.pr})"
         if self.author:
             entry += f" by @{self.author}"
         if self.commit_hash:
-            entry += f" ([{self.commit_hash}](https://github.com/{os.getenv('GITHUB_REPOSITORY')}/commit/{self.commit_hash}))"
+            entry += f" ([{self.commit_hash}](https://github.com/{repo}/commit/{self.commit_hash}))"
         if self.docs_hint:
             entry += f"\n  > {self.docs_hint}"
         return entry
@@ -91,14 +92,25 @@ class ChangelogUpdater:
 
         # Define paths
         self.changelog_path = Path("CHANGELOG.md")
+        self.docs_conf_path = Path("docs/source/conf.py")
         self.readme_path = Path("README.rst")
+        self.project_path = Path("pyproject.toml")
+        self.package_path = Path("django_blocknote/__init__.py")
         self.version_path = Path("version.toml")
 
         # Verify required files exist
         if not self.changelog_path.exists():
-            raise FileNotFoundError("CHANGELOG.md not found")
+            msg = "CHANGELOG.md not found"
+            raise FileNotFoundError(msg)
+        if not self.project_path.exists():
+            msg = "pyproject.toml not found"
+            raise FileNotFoundError(msg)
+        if not self.package_path.exists():
+            msg = "django_blocknote/__init__.py not found"
+            raise FileNotFoundError(msg)
         if not self.version_path.exists():
-            raise FileNotFoundError("version.toml not found")
+            msg = "version.toml not found"
+            raise FileNotFoundError(msg)
 
     @staticmethod
     def _get_github_client() -> Github:
@@ -186,28 +198,7 @@ class ChangelogUpdater:
         # Log the commit being processed
         logger.info(f"Processing commit message: {title}")
 
-        # Check if the commit is a revert commit
-        revert_pattern = r'^Revert\s+"(?P<original_message>.+)"$'
-        revert_match = re.match(revert_pattern, title.strip())
-
-        if revert_match:
-            # Extract the original commit message from the revert commit
-            original_message = revert_match.group("original_message")
-            logger.info(f"Revert commit detected. Original message: {original_message}")
-
-            # Parse the original commit message
-            original_entry = self._parse_commit_message(original_message)
-            if original_entry:
-                # Modify the description to indicate it's a revert
-                original_entry.description = f"Revert: {original_entry.description}"
-                return original_entry
-            else:
-                logger.info(
-                    "Original commit message in revert does not match expected format"
-                )
-                return None
-
-        # Handle regular commit messages
+        # Allows for 0-3 spaces after the colon.
         title_pattern = r"^(?:BREAKING\s+)?(?P<type>\w+)\((?P<scope>[\w-]+)\):\s{0,3}(?P<description>.+?)\s+#(?P<pr>\d+)(?:\s+@(?P<author>\S+))?\s*(?:\[(?P<commit_hash>\w+)\])?$"
         title_match = re.match(title_pattern, title.strip())
 
@@ -266,6 +257,69 @@ class ChangelogUpdater:
             return today, int(latest_increment) + 1
         return today, 1
 
+    def _get_updated_docs_conf(self, version: str) -> str:
+        """\
+        Find and update the docs config version number.
+
+        Returns:
+            string: Formatted conf.py file string.
+        """
+
+        try:
+            content = self.docs_conf_path.read_text().splitlines()
+            # Find and replace the version line
+            for i, line in enumerate(content):
+                if line.startswith('__version__ = "'):
+                    content[i] = f'__version__ = "{version}"'
+                    break
+
+            return "\n".join(content)
+        except Exception:
+            logger.exception("Failed to update docs conf.py version")
+            raise
+
+    def _get_updated_package(self, version: str) -> str:
+        """\
+        Find and update the package version number.
+
+        Returns:
+            string: Formatted package file string.
+        """
+
+        try:
+            content = self.package_path.read_text().splitlines()
+            # Find and replace the version line
+            for i, line in enumerate(content):
+                if line.startswith('__version__ = "'):
+                    content[i] = f'__version__ = "{version}"'
+                    break
+
+            return "\n".join(content)
+        except Exception:
+            logger.exception("Failed to update pyproject.toml version")
+            raise
+
+    def _get_updated_pyproject(self, version: str) -> str:
+        """\
+        Find and update the pyproject version number.
+
+        Returns:
+            string: Formatted pyproject file string.
+        """
+
+        try:
+            content = self.project_path.read_text().splitlines()
+            # Find and replace the version line
+            for i, line in enumerate(content):
+                if line.startswith('version = "'):
+                    content[i] = f'version = "{version}"'
+                    break
+
+            return "\n".join(content)
+        except Exception:
+            logger.exception("Failed to update pyproject.toml version")
+            raise
+
     def _get_updated_readme(self, version: str) -> str:
         """\
         Find and update the README version number.
@@ -289,7 +343,7 @@ class ChangelogUpdater:
 
     def update_changelog(self) -> bool:
         """
-        Updates both CHANGELOG.md and version.toml with new version information.
+        Updates both CHANGELOG.md and pyproject.toml with new version information.
         """
         try:
             commits = self._get_pr_commits()
@@ -340,17 +394,26 @@ class ChangelogUpdater:
             f"<!--next-version-placeholder-->\n{new_version}",
         )
 
-        version_data = f'[tb.version]\n__version__ = "{version.strip()}"\n'
+        version_data = f'[version]\n__version__ = "{version.strip()}"\n'
 
         if self.changes_made:
             try:
-                # Update both files atomically
+                # Update versioned files automically
                 self.changelog_path.write_text(updated_content)
-                self.version_path.write_text(version_data)
+                self.docs_conf_path.write_text(
+                    self._get_updated_docs_conf(version=version),
+                )
+                self.package_path.write_text(
+                    self._get_updated_package(version=version)
+                )  # update __init__.py
+                self.project_path.write_text(
+                    self._get_updated_pyproject(version=version)
+                )
                 self.readme_path.write_text(self._get_updated_readme(version=version))
+                self.version_path.write_text(version_data)
 
                 logger.info(
-                    f"Successfully updated CHANGELOG.md, README.rst and version.toml to version {version}"
+                    f"Successfully updated CHANGELOG.md, README.rst, pyproject.toml and version.toml to version {version}"
                 )
                 return True
 
