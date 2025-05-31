@@ -101,16 +101,16 @@ class BlockNoteWidget(forms.Textarea):
         context["widget"]["editor_id"] = widget_id
 
         # Add hashed asset URLs to context for template use
-        context["widget"]["js_url"] = get_vite_asset("blocknote.js")
+        context["widget"]["js_url"] = get_vite_asset("src/blocknote.ts")
         context["widget"]["css_url"] = get_vite_asset("blocknote.css")
 
         # Debug output in development
         if getattr(settings, "DEBUG", False):
-            print(f"BlockNote Widget Context: id={widget_id}")
-            print(f"  Config: {config_json}")
-            print(f"  Upload Config: {upload_config_json}")
-            print(f"  Content: {initial_content_json[:100]}...")
-            print(f"  JS URL: {context['widget']['js_url']}")
-            print(f"  CSS URL: {context['widget']['css_url']}")
+            print(f"BlockNote Widget Context: id={widget_id}")  # noqa: T201
+            print(f"  Config: {config_json}")  # noqa: T201
+            print(f"  Upload Config: {upload_config_json}")  # noqa: T201
+            print(f"  Content: {initial_content_json[:100]}...")  # noqa: T201
+            print(f"  JS URL: {context['widget']['js_url']}")  # noqa: T201
+            print(f"  CSS URL: {context['widget']['css_url']}")  # noqa: T201
 
         return context
