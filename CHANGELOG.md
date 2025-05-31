@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.05.31.2]
+
+### Maintenance
+- Add pyproject to version updater (version) [#8](https://github.com/Dunwright-dev/django-blocknote/pull/8)
+
+
 ## [2025.05.31.1]
 
 ### Maintenance
