@@ -3,7 +3,7 @@ Django BlockNote |Docs| |Django| |Repo|
 =======================================
 |
 
-**Version = 2025.05.30.1**
+**Version = 2025.05.31.1**
 
 |
 

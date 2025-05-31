@@ -2,6 +2,15 @@
 
 <!--next-version-placeholder-->
 
+## [2025.05.31.1]
+
+### Maintenance
+- Update deps, example setup shell (conf) #5
+
+### Bug Fixes
+- Add valid json if none exists on form save (editor) #5
+
+
 ## [2025.05.30.1]
 
 ### Maintenance
