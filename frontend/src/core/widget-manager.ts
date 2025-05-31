@@ -7,10 +7,10 @@ export const blockNoteRoots = new Map(); // Track React roots for cleanup
 
 export function initWidgetWithData(editorId: string, config: Record<string, unknown> = {}, initialContent: unknown = null, readonly: boolean = false) {
     console.log('Initializing BlockNote widget:', editorId);
-    
+
     const container = document.getElementById(editorId + '_editor');
     const textarea = document.getElementById(editorId);
-    
+
     if (!container || !textarea) {
         console.error('Elements not found for editor:', editorId);
         return;
@@ -19,7 +19,7 @@ export function initWidgetWithData(editorId: string, config: Record<string, unkn
     // Read upload config from DOM
     const uploadConfigElement = document.getElementById(`${editorId}_upload_config`);
     let uploadConfig: Record<string, unknown> = {};
-    
+
     if (uploadConfigElement) {
         try {
             const uploadConfigText = uploadConfigElement.textContent || '{}';
@@ -50,12 +50,30 @@ export function initWidgetWithData(editorId: string, config: Record<string, unkn
         (loadingDiv as HTMLElement).style.display = 'none';
     }
 
-    // Process initial content
+    // Process initial content and ensure it's valid JSON
     let processedContent: unknown = null;
+    let textareaInitialValue = '[]'; // Default fallback for textarea
+
     if (initialContent && Array.isArray(initialContent) && initialContent.length > 0) {
         processedContent = initialContent;
+        textareaInitialValue = JSON.stringify(initialContent);
+    } else {
+        // For empty editors, let BlockNote create its own default content
+        // but ensure textarea has valid JSON
+        processedContent = undefined; // Let BlockNote handle empty state
+        textareaInitialValue = '[]'; // Valid empty JSON for Django form validation
     }
-    
+
+    // This prevents "Enter a valid JSON" errors on form submission
+    const textareaElement = textarea as HTMLTextAreaElement;
+    try {
+        textareaElement.value = textareaInitialValue;
+        console.log(`🔧 Initialized textarea for ${editorId} with valid JSON:`, textareaInitialValue);
+    } catch (error) {
+        console.error(`❌ Failed to initialize textarea JSON for ${editorId}:`, error);
+        textareaElement.value = '[]'; // Ultimate fallback
+    }
+
     // Extract fallback text
     let fallbackText = '';
     if (processedContent && Array.isArray(processedContent)) {
@@ -76,14 +94,24 @@ export function initWidgetWithData(editorId: string, config: Record<string, unkn
         }
     }
 
-    // Change handler
+    // Change handler with error handling
     const handleChange = (content: unknown) => {
         try {
-            const textareaElement = textarea as HTMLTextAreaElement;
-            textareaElement.value = JSON.stringify(content || []);
+            // Ensure content is serializable
+            const jsonContent = JSON.stringify(content || []);
+            textareaElement.value = jsonContent;
+
+            // Dispatch change event for Django forms
             textareaElement.dispatchEvent(new Event('change', { bubbles: true }));
+            textareaElement.dispatchEvent(new Event('input', { bubbles: true }));
+
+            console.log(`📝 Updated textarea for ${editorId}`);
         } catch (error) {
-            console.error('Error updating textarea:', error);
+            console.error(`❌ Error updating textarea for ${editorId}:`, error);
+
+            // Fallback: set to empty array if JSON serialization fails
+            textareaElement.value = '[]';
+            textareaElement.dispatchEvent(new Event('change', { bubbles: true }));
         }
     };
 
@@ -94,23 +122,25 @@ export function initWidgetWithData(editorId: string, config: Record<string, unkn
             config: {
                 ...config,
             },
-            uploadConfig: uploadConfig, // Add the upload config here
+            uploadConfig: uploadConfig,
             onChange: handleChange,
             readonly: readonly,
         });
 
         const root = createRoot(container);
         root.render(element);
-        
+
         // Store root for cleanup
         blockNoteRoots.set(editorId, root);
-        
+
         console.log('✅ BlockNote widget rendered successfully:', editorId);
-        
+
     } catch (error) {
         console.error('Critical widget initialization error:', error);
-        
-        // Ultimate fallback
+
+        // Ultimate fallback - but still ensure valid JSON in textarea
+        textareaElement.value = '[]';
+
         container.innerHTML = `
             <div style="border: 2px solid #ef4444; padding: 16px; border-radius: 8px; background: #fef2f2;">
                 <div style="font-weight: 600; margin-bottom: 8px; color: #dc2626;">
@@ -127,7 +157,8 @@ export function initWidgetWithData(editorId: string, config: Record<string, unkn
                             content: [{ type: 'text', text: this.value }],
                             children: []
                         }] : [];
-                        document.getElementById('${editorId}').value = JSON.stringify(content);
+                        const jsonContent = JSON.stringify(content);
+                        document.getElementById('${editorId}').value = jsonContent;
                         document.getElementById('${editorId}').dispatchEvent(new Event('change', { bubbles: true }));
                     "
                 >${fallbackText}</textarea>
