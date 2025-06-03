@@ -202,6 +202,19 @@ DJ_BN_ALLOWED_DOCUMENT_TYPES = [
     'text/plain'
 ]
 
+DJ_BN_IMAGE_UPLOAD_CONFIG = {
+    "uploadUrl": "/django-blocknote/upload-image/",
+    "maxFileSize": 10 * 1024 * 1024,  # 10MB
+    "allowedTypes": ["image/*"],
+    "showProgress": False,
+    "maxConcurrent": 3,
+    "timeout": 30000,
+    "chunkSize": 1024 * 1024,
+    "retryAttempts": 3,
+    "retryDelay": 1000,
+    "img_model": "",  # Optional: Django model for custom image handling
+}
+
 # Widget configuration
 DJANGO_BLOCKNOTE = {
     'DEFAULT_CONFIG': {
@@ -296,160 +309,143 @@ class BlogPost(models.Model):
     content = BlockNoteField(
         help_text="Main content of the blog post",
         blank=True,
+        editor_config={
+            'placeholder': 'Write your blog post content here...',
+            'theme': 'light',
+            'animations': True,
+        },
+        image_upload_config={
+            'img_model': 'blog:BlogPost',  # app:model format
+            'maxFileSize': 10 * 1024 * 1024,  # 10MB
+            'allowedTypes': ['image/*']
+        }
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
     class Meta:
         ordering = ['-created_at']
-
+    
     def __str__(self):
         return self.title
 
 class Comment(models.Model):
     post = models.ForeignKey(BlogPost, on_delete=models.CASCADE, related_name='comments')
     author = models.CharField(max_length=100)
-    content = BlockNoteField(help_text="Comment content")
+    content = BlockNoteField(
+        help_text="Comment content",
+        editor_config={
+            'placeholder': 'Write your comment...',
+            'theme': 'light',
+        },
+        image_upload_config={
+            'img_model': 'blog:Comment',  # app:model format
+            'maxFileSize': 2 * 1024 * 1024,  # 2MB for comments
+            'allowedTypes': ['image/jpeg', 'image/png', 'image/gif']
+        }
+    )
     created_at = models.DateTimeField(auto_now_add=True)
-
+    
     def __str__(self):
         return f'Comment by {self.author} on {self.post.title}'
 MODELS_EOF
 
+cat >> blog/models.py << 'TEST_MODELS_EOF'
+
+# Test models for different upload configurations
+class RestrictiveUploadTest(models.Model):
+    """Model for testing restrictive upload settings"""
+    content = BlockNoteField(
+        editor_config={
+            'placeholder': 'Restrictive upload settings...',
+            'theme': 'light'
+        },
+        image_upload_config={
+            'img_model': 'blog:RestrictiveUploadTest',
+            'maxFileSize': 1 * 1024 * 1024,  # 1MB only
+            'allowedTypes': ['image/jpeg'],  # JPEG only
+            'showProgress': True,
+            'maxConcurrent': 1
+        }
+    )
+
+class PermissiveUploadTest(models.Model):
+    """Model for testing permissive upload settings"""
+    content = BlockNoteField(
+        editor_config={
+            'placeholder': 'Permissive upload settings...',
+            'theme': 'dark'
+        },
+        image_upload_config={
+            'img_model': 'blog:PermissiveUploadTest',
+            'maxFileSize': 20 * 1024 * 1024,  # 20MB
+            'allowedTypes': ['image/*'],  # All image types
+            'showProgress': True,
+            'maxConcurrent': 3
+        }
+    )
+
+class NoUploadTest(models.Model):
+    """Model for testing no upload configuration"""
+    content = BlockNoteField(
+        editor_config={
+            'placeholder': 'No uploads allowed in this editor...',
+            'theme': 'light'
+        },
+        image_upload_config={
+            'allowedTypes': []  # No uploads
+        }
+    )
+TEST_MODELS_EOF
+
 cat > blog/forms.py << 'FORMS_EOF'
 from django import forms
-from django_blocknote.widgets import BlockNoteWidget
 from .models import BlogPost, Comment
 
 class BlogPostForm(forms.ModelForm):
     class Meta:
         model = BlogPost
         fields = ['title', 'content']
-        widgets = {
-            'content': BlockNoteWidget(
-                config={
-                    'placeholder': 'Write your blog post content here...',
-                    'theme': 'light',
-                    'animations': True,
-                },
-                upload_config={
-                    'uploadUrl': '/django-blocknote/upload-image/',
-                    'maxFileSize': 10 * 1024 * 1024,  # 10MB
-                    'allowedTypes': ['image/*']
-                }
-            ),
-        }
+        # No widget overrides - configuration comes from the model field
 
 class CommentForm(forms.ModelForm):
     class Meta:
         model = Comment
         fields = ['author', 'content']
-        widgets = {
-            'content': BlockNoteWidget(
-                config={
-                    'placeholder': 'Write your comment...',
-                    'theme': 'light',
-                },
-                upload_config={
-                    'uploadUrl': '/django-blocknote/upload-image/',
-                    'maxFileSize': 2 * 1024 * 1024,  # 2MB for comments
-                    'allowedTypes': ['image/jpeg', 'image/png', 'image/gif']
-                }
-            ),
-        }
+        # No widget overrides - configuration comes from the model field
 
-# Comprehensive upload testing form with all the bells and whistles
+# Testing form with explicit widget configurations for various scenarios
 class UploadTestForm(forms.Form):
     """Comprehensive form to test all upload configurations and edge cases"""
     
     # Standard configuration
     standard_editor = forms.CharField(
-        widget=BlockNoteWidget(
-            upload_config={
-                'uploadUrl': '/django-blocknote/upload-image/',
-                'maxFileSize': 5 * 1024 * 1024,  # 5MB
-                'allowedTypes': ['image/jpeg', 'image/png', 'image/webp'],
-                'showProgress': True
-            }
-        ),
+        widget=forms.Textarea(),  # Will be replaced by field formfield() method
         label="Standard Editor (5MB, JPEG/PNG/WebP, Progress)",
         help_text="Standard upload configuration with common image types",
         required=False
     )
     
-    # Restrictive configuration  
-    restrictive_editor = forms.CharField(
-        widget=BlockNoteWidget(
-            config={
-                'placeholder': 'Restrictive upload settings...',
-                'theme': 'light'
-            },
-            upload_config={
-                'uploadUrl': '/django-blocknote/upload-image/',
-                'maxFileSize': 1 * 1024 * 1024,  # 1MB only
-                'allowedTypes': ['image/jpeg'],  # JPEG only
-                'showProgress': True,
-                'maxConcurrent': 1
-            }
-        ),
-        label="Restrictive Editor (1MB, JPEG only)",
-        help_text="Highly restrictive settings to test file validation",
-        required=False
-    )
-    
-    # Permissive configuration
-    permissive_editor = forms.CharField(
-        widget=BlockNoteWidget(
-            config={
-                'placeholder': 'Permissive upload settings...',
-                'theme': 'dark'
-            },
-            upload_config={
-                'uploadUrl': '/django-blocknote/upload-image/',
-                'maxFileSize': 20 * 1024 * 1024,  # 20MB
-                'allowedTypes': ['image/*'],  # All image types
-                'showProgress': True,
-                'maxConcurrent': 3
-            }
-        ),
-        label="Permissive Editor (20MB, All Images, Dark Theme)",
-        help_text="Generous settings to test large file handling",
-        required=False
-    )
-    
-    # No uploads allowed
-    no_upload_editor = forms.CharField(
-        widget=BlockNoteWidget(
-            config={
-                'placeholder': 'No uploads allowed in this editor...',
-                'theme': 'light'
-            },
-            upload_config={
-                'allowedTypes': []  # No uploads
-            }
-        ),
-        label="No Upload Editor",
-        help_text="Upload functionality completely disabled",
-        required=False
-    )
+    # For testing, we can create custom fields or use explicit widget configs
+    # These would normally use custom BlockNoteField instances with different configs
     
     # Multiple editors to test form validation
     editor_1 = forms.CharField(
-        widget=BlockNoteWidget(),
+        widget=forms.Textarea(),
         label="Multi-Editor Test 1",
         help_text="First editor in multi-editor form",
         required=False
     )
     
     editor_2 = forms.CharField(
-        widget=BlockNoteWidget(),
+        widget=forms.Textarea(),
         label="Multi-Editor Test 2", 
         help_text="Second editor in multi-editor form",
         required=False
     )
     
     editor_3 = forms.CharField(
-        widget=BlockNoteWidget(),
+        widget=forms.Textarea(),
         label="Multi-Editor Test 3",
         help_text="Third editor in multi-editor form",
         required=False
@@ -1087,7 +1083,6 @@ django.setup()
 
 from blog.models import BlogPost
 
-# Create sample blog post with proper BlockNote content
 sample_content = [
     {
         "id": "welcome-1",
@@ -1101,9 +1096,9 @@ sample_content = [
         "type": "paragraph",
         "props": {},
         "content": [
-            {"type": "text", "text": "This sample post demonstrates the "},
-            {"type": "text", "text": "read-only viewer", "styles": {"bold": True}},
-            {"type": "text", "text": " functionality. You can edit this post to test the editor."}
+            {"type": "text", "text": "This is a sample blog post showcasing the "},
+            {"type": "text", "text": "rich text editing capabilities", "styles": {"bold": True}},
+            {"type": "text", "text": " of BlockNote. You can edit this post to test the editor or create new posts to explore the features."}
         ],
         "children": []
     },
@@ -1111,7 +1106,20 @@ sample_content = [
         "id": "welcome-3",
         "type": "paragraph", 
         "props": {},
-        "content": [{"type": "text", "text": "Try creating new posts, adding comments, and testing the upload functionality!"}],
+        "content": [{"type": "text", "text": "Try adding images, formatting text, and testing the upload functionality. Comments support images too with different upload limits!"}],
+        "children": []
+    },
+    {
+        "id": "welcome-4",
+        "type": "paragraph", 
+        "props": {},
+        "content": [
+            {"type": "text", "text": "✨ Features: "},
+            {"type": "text", "text": "Rich text editing", "styles": {"italic": True}},
+            {"type": "text", "text": " • "},
+            {"type": "text", "text": "Image uploads", "styles": {"bold": True}},
+            {"type": "text", "text": " • Form validation • Multi-editor support"}
+        ],
         "children": []
     }
 ]

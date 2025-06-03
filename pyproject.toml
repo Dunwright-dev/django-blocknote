@@ -54,6 +54,7 @@ dev = [
     "isort",
     "django-blocknote[docs]",
     "django-coverage",
+    "djlint",
     "pytest",
     "pytest-cov",
     "pytest-randomly",
