@@ -2,6 +2,15 @@
 
 <!--next-version-placeholder-->
 
+## [2025.06.04.1]
+
+### Maintenance
+- Add custom image handling through config (image) [#10](https://github.com/Dunwright-dev/django-blocknote/pull/10)
+- Add deps, update setup.sh (deps) [#10](https://github.com/Dunwright-dev/django-blocknote/pull/10)
+- Update image upload handling (image) [#10](https://github.com/Dunwright-dev/django-blocknote/pull/10)
+- Update scripts and image handling (image) [#10](https://github.com/Dunwright-dev/django-blocknote/pull/10)
+
+
 ## [2025.05.31.2]
 
 ### Maintenance
