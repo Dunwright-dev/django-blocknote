@@ -1,9 +1,13 @@
 import json
+import uuid
 
 from django import template
 from django.conf import settings
 from django.contrib.staticfiles import finders
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.serializers.json import DjangoJSONEncoder
 from django.templatetags.static import static
+from django.urls import NoReverseMatch, reverse
 from django.utils.safestring import mark_safe
 
 from django_blocknote.assets import get_vite_asset
@@ -303,7 +307,9 @@ def blocknote_form_validation_debug():
 
 
 @register.simple_tag
-def blocknote_full(include_form_validation=True):
+def blocknote_full(
+    include_form_validation=True,
+):
     """
     Load complete BlockNote setup (all dependencies + assets + form validation)
     Usage:
@@ -389,77 +395,135 @@ def blocknote_asset_debug():
     return mark_safe(html)
 
 
-@register.inclusion_tag("django_blocknote/tags/blocknote_viewer.html")
-def blocknote_viewer(content, container_id=None, css_class="blocknote-viewer"):
+def get_user_theme(user):
     """
-    Render BlockNote content in read-only mode
-    Usage:
-        {% blocknote_viewer document.content %}
-        {% blocknote_viewer document.content container_id="my-viewer" %}
-        {% blocknote_viewer document.content css_class="custom-viewer" %}
+    Robust user theme detection supporting multiple patterns:
+    - user.profile.theme (field or property)
+    - user.userprofile.theme (field or property)
+    - user.preferences.theme (field or property)
+    - user.theme_preference (direct field)
     """
-    import uuid
+    if not user or not user.is_authenticated:
+        return None
 
-    from django.core.serializers.json import DjangoJSONEncoder
+    # List of possible theme attribute paths to check
+    theme_paths = [
+        ("profile", "theme"),
+        ("userprofile", "theme"),
+        ("preferences", "theme"),
+        ("user_preferences", "theme"),
+        ("settings", "theme"),
+    ]
 
-    # Generate unique container ID if not provided
-    if not container_id:
-        container_id = f"blocknote_viewer_{uuid.uuid4().hex[:8]}"
-
-    # Serialize content safely
-    content_json = "[]"
-    if content:
+    # Check each possible path
+    for relation_name, theme_attr in theme_paths:
         try:
-            if isinstance(content, str):
-                # Try to parse if it's a JSON string
-                try:
-                    parsed = json.loads(content)
-                    content_json = json.dumps(
-                        parsed,
-                        cls=DjangoJSONEncoder,
-                        ensure_ascii=False,
-                    )
-                except json.JSONDecodeError:
-                    # If parsing fails, treat as plain text and create a simple block
-                    content_json = json.dumps(
-                        [
-                            {
-                                "id": f"text_{uuid.uuid4().hex[:8]}",
-                                "type": "paragraph",
-                                "props": {},
-                                "content": [{"type": "text", "text": content}],
-                                "children": [],
-                            },
-                        ],
-                        cls=DjangoJSONEncoder,
-                    )
-            elif isinstance(content, (list, dict)):
-                content_json = json.dumps(
-                    content,
-                    cls=DjangoJSONEncoder,
-                    ensure_ascii=False,
-                )
-        except (TypeError, ValueError) as e:
-            print(f"Error serializing BlockNote content: {e}")
-            # Create a fallback block with error message
-            content_json = json.dumps(
-                [
-                    {
-                        "id": f"error_{uuid.uuid4().hex[:8]}",
-                        "type": "paragraph",
-                        "props": {},
-                        "content": [
-                            {"type": "text", "text": "Error displaying content"},
-                        ],
-                        "children": [],
-                    },
-                ],
-                cls=DjangoJSONEncoder,
-            )
+            # Check if user has the relation
+            if hasattr(user, relation_name):
+                relation_obj = getattr(user, relation_name, None)
+
+                # Handle case where relation exists but is None
+                if relation_obj is None:
+                    continue
+
+                # Check if the relation object has the theme attribute
+                if hasattr(relation_obj, theme_attr):
+                    theme_value = getattr(relation_obj, theme_attr, None)
+
+                    # Validate theme value
+                    if theme_value and theme_value in ["light", "dark", "auto"]:
+                        return theme_value
+
+        except (AttributeError, ObjectDoesNotExist, TypeError):
+            # Continue to next path if this one fails
+            continue
+
+    # Check for direct theme attributes on user
+    direct_theme_attrs = ["theme", "theme_preference", "ui_theme", "color_scheme"]
+
+    for attr_name in direct_theme_attrs:
+        try:
+            if hasattr(user, attr_name):
+                theme_value = getattr(user, attr_name, None)
+                if theme_value and theme_value in ["light", "dark", "auto"]:
+                    return theme_value
+        except (AttributeError, TypeError):
+            continue
+
+    return None
+
+
+@register.inclusion_tag(
+    "django_blocknote/tags/blocknote_viewer.html",
+    takes_context=True,
+)
+def blocknote_viewer(
+    context,
+    content,
+    container_id=None,
+    css_class="blocknote-viewer",
+    theme=None,
+):
+    """
+    Simple viewer with robust user theme detection
+    """
+
+    # Get viewer config from settings
+    viewer_config = getattr(
+        settings,
+        "DJ_BN_VIEWER_CONFIG",
+        {
+            "theme": "light",
+            "animations": True,
+        },
+    )
+
+    # Handle if it's accidentally a tuple
+    if isinstance(viewer_config, tuple):
+        viewer_config = viewer_config[0].copy()
+    else:
+        viewer_config = viewer_config.copy()
+
+    # Theme priority: explicit > user preference > setting default
+    if theme:
+        # Explicit override has highest priority
+        viewer_config["theme"] = theme
+    else:
+        # Try to get user's theme preference
+        user = context.get("user")
+        user_theme = get_user_theme(user)
+        if user_theme:
+            viewer_config["theme"] = user_theme
+
+    default_upload_config = getattr(settings, "DJ_BN_IMAGE_UPLOAD_CONFIG", {})
+    image_upload_config = default_upload_config.copy()
+
+    if "uploadUrl" not in image_upload_config:
+        try:
+            image_upload_config["uploadUrl"] = reverse("django_blocknote:upload_image")
+        except NoReverseMatch:
+            image_upload_config["uploadUrl"] = "/django-blocknote/upload-image/"
+
+    image_upload_config.update({"showProgress": False})
+
+    # Serialize configs
+    content_json = json.dumps(content or [], cls=DjangoJSONEncoder, ensure_ascii=False)
+    editor_config_json = json.dumps(
+        viewer_config,
+        cls=DjangoJSONEncoder,
+        ensure_ascii=False,
+    )
+    image_upload_config_json = json.dumps(
+        image_upload_config,
+        cls=DjangoJSONEncoder,
+        ensure_ascii=False,
+    )
 
     return {
-        "container_id": container_id,
+        "container_id": container_id or f"blocknote_viewer_{uuid.uuid4().hex[:8]}",
         "css_class": css_class,
         "content_json": content_json,
-        "has_content": content is not None and content != "" and content != [],
+        "has_content": bool(content),
+        "editor_config": editor_config_json,
+        "image_upload_config": image_upload_config_json,
     }
