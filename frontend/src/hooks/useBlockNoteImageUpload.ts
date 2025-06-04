@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
-import type { 
-    UploadConfig, 
-    UploadState, 
-    UploadError, 
-    UseBlockNoteUploadReturn 
+import type {
+    ImageUploadConfig,
+    UploadState,
+    UploadError,
+    UseBlockNoteUploadReturn
 } from '../types/upload';
 import type { DjangoUploadResponse, DjangoUploadError } from '../types/django';
 import { getCsrfToken } from '../internal/csrf-helpers';
@@ -16,28 +16,34 @@ import { getCsrfToken } from '../internal/csrf-helpers';
  * 
  * @example
  * ```typescript
- * const { uploadFile, uploading, error } = useBlockNoteUpload({
+ * const { uploadFile, uploading, error } = useBlockNoteImageUpload({
  *   uploadUrl: '/blog/upload-image/',
  *   maxFileSize: 5 * 1024 * 1024 // 5MB
  * });
  * ```
  */
-export function useBlockNoteUpload(config: UploadConfig = {}): UseBlockNoteUploadReturn {
-    console.log('🔧 useBlockNoteUpload called with config:', config);
-    
+export function useBlockNoteImageUpload(config: ImageUploadConfig): UseBlockNoteUploadReturn {
+    console.log('🔧 useBlockNoteImageUpload called with config:', config);
+
+    // Validate early
+    if (!config.uploadUrl) {
+        throw new Error('Upload URL is required - check Django widget configuration');
+    }
+
     // ES2022 + TypeScript: Create config with defaults
-    const uploadConfig = useMemo((): Required<UploadConfig> => {
+    const uploadConfig = useMemo((): Required<ImageUploadConfig> => {
         const result = {
             uploadUrl: config.uploadUrl ?? '/django-blocknote/upload-image/',
             maxFileSize: config.maxFileSize ?? (10 * 1024 * 1024),
             allowedTypes: config.allowedTypes ?? ['image/*'],
             showProgress: config.showProgress ?? false,
             maxConcurrent: config.maxConcurrent ?? 1,
+            img_model: config.img_model ?? "",
         };
         console.log('🔧 Final upload config:', result);
         return result;
     }, [config]);
-    
+
     // Upload state with TypeScript
     const [state, setState] = useState<UploadState>({
         uploading: false,
@@ -45,7 +51,7 @@ export function useBlockNoteUpload(config: UploadConfig = {}): UseBlockNoteUploa
         error: null,
         queue: [],
     });
-    
+
     /**
      * Validate file before upload
      */
@@ -58,7 +64,7 @@ export function useBlockNoteUpload(config: UploadConfig = {}): UseBlockNoteUploa
             };
             throw error;
         }
-        
+
         // Check file type
         const isAllowed = uploadConfig.allowedTypes.some((allowedType: string) => {
             if (allowedType.endsWith('/*')) {
@@ -67,7 +73,7 @@ export function useBlockNoteUpload(config: UploadConfig = {}): UseBlockNoteUploa
             }
             return file.type === allowedType;
         });
-        
+
         if (!isAllowed) {
             const error: UploadError = {
                 message: `File type "${file.type}" is not allowed. Allowed types: ${uploadConfig.allowedTypes.join(', ')}`,
@@ -76,7 +82,7 @@ export function useBlockNoteUpload(config: UploadConfig = {}): UseBlockNoteUploa
             throw error;
         }
     }, [uploadConfig.maxFileSize, uploadConfig.allowedTypes]);
-    
+
     /**
      * Upload a file to the Django backend
      */
@@ -85,25 +91,27 @@ export function useBlockNoteUpload(config: UploadConfig = {}): UseBlockNoteUploa
         if (!file || !(file instanceof File)) {
             throw new Error('Invalid file provided');
         }
-        
+
         try {
             // Validate file
             validateFile(file);
-            
+
             // Update state
-            setState(prev => ({ 
-                ...prev, 
-                uploading: true, 
+            setState(prev => ({
+                ...prev,
+                uploading: true,
                 error: null,
-                progress: 0 
+                progress: 0
             }));
-            
+
             // Prepare request
             const formData = new FormData();
             formData.append('file', file);
-            
+
+            formData.append('image_upload_config', JSON.stringify(config));
+
             const csrfToken = getCsrfToken();
-            
+
             // Make request
             const response = await fetch(uploadConfig.uploadUrl, {
                 method: 'POST',
@@ -112,69 +120,69 @@ export function useBlockNoteUpload(config: UploadConfig = {}): UseBlockNoteUploa
                     'X-CSRFToken': csrfToken,
                 },
             });
-            
+
             // Handle response
             if (!response.ok) {
                 let errorData: DjangoUploadError;
                 try {
                     errorData = await response.json() as DjangoUploadError;
                 } catch {
-                    errorData = { 
-                        error: `HTTP ${response.status}: ${response.statusText}` 
+                    errorData = {
+                        error: `HTTP ${response.status}: ${response.statusText}`
                     };
                 }
-                
+
                 throw new Error(errorData.error);
             }
-            
+
             // Parse successful response
             const data: DjangoUploadResponse = await response.json();
-            
+
             if (!data.url || typeof data.url !== 'string') {
                 throw new Error('Invalid server response: missing or invalid URL');
             }
-            
+
             // Update state - success
-            setState(prev => ({ 
-                ...prev, 
+            setState(prev => ({
+                ...prev,
                 uploading: false,
-                progress: 100 
+                progress: 100
             }));
-            
+
             return data.url;
-            
+
         } catch (originalError) {
             // Create typed error
             const error: UploadError = {
-                message: originalError instanceof Error 
-                    ? originalError.message 
+                message: originalError instanceof Error
+                    ? originalError.message
                     : 'Unknown upload error',
-                code: originalError instanceof Error && originalError.message.includes('File size') 
+                code: originalError instanceof Error && originalError.message.includes('File size')
                     ? 'FILE_TOO_LARGE'
                     : originalError instanceof Error && originalError.message.includes('not allowed')
-                    ? 'INVALID_TYPE'
-                    : 'SERVER_ERROR',
+                        ? 'INVALID_TYPE'
+                        : 'SERVER_ERROR',
                 originalError: originalError instanceof Error ? originalError : undefined,
             };
-            
+
             // Update state - error
-            setState(prev => ({ 
-                ...prev, 
-                uploading: false, 
-                error 
+            setState(prev => ({
+                ...prev,
+                uploading: false,
+                error
             }));
-            
+
             throw error;
         }
     }, [uploadConfig.uploadUrl, validateFile]);
-    
+
     /**
      * Clear current error
      */
     const clearError = useCallback((): void => {
         setState(prev => ({ ...prev, error: null }));
     }, []);
-    
+
     // Return hook API
     return {
         uploadFile,

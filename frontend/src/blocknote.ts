@@ -1,11 +1,17 @@
 import '@blocknote/core/fonts/inter.css';
 import '@blocknote/mantine/style.css';
 import './styles/blocknote.css';
-
 // Import with proper TypeScript paths
 import { scanForWidgets } from './core/dom-scanner';
-import { initWidgetWithData, blockNoteRoots } from './core/widget-manager';
+import {
+    initWidgetWithData,
+    blockNoteRoots,
+} from './core/widget-manager';
 import { checkReady } from './utils/helpers';
+import type {
+    EditorConfig,
+    UploadConfig,
+} from './types';
 
 console.log('Loading BlockNote 0.31.0 with React 19 (HTMX compatible)...');
 console.log('🚀 BlockNote script started loading');
@@ -15,11 +21,13 @@ console.log('ReactDOM available at start:', typeof ReactDOM !== 'undefined');
 // TypeScript interfaces
 interface WidgetData {
     editorId: string;
-    config: Record<string, unknown>;
+    editorConfig: EditorConfig;
+    uploadConfig: UploadConfig;
     initialContent: unknown;
     readonly: boolean;
 }
 
+// HTMX interfaces
 interface HTMXEvent extends Event {
     detail: {
         target?: Element;
@@ -30,9 +38,10 @@ interface HTMXEvent extends Event {
 interface DjangoBlockNoteAPI {
     scanForWidgets: (rootElement?: Document | Element) => void;
     initWidget: (
-        editorId: string, 
-        config: Record<string, unknown>, 
-        initialContent: unknown, 
+        editorId: string,
+        editorConfig: EditorConfig,
+        uploadConfig: UploadConfig,
+        initialContent: unknown,
         readonly: boolean
     ) => void;
     blockNoteRoots: Map<string, unknown>;
@@ -51,17 +60,18 @@ let pendingWidgets: WidgetData[] = [];
 
 // Initialize a widget immediately or queue it
 function initWidget(
-    editorId: string, 
-    config: Record<string, unknown>, 
-    initialContent: unknown, 
+    editorId: string,
+    editorConfig: EditorConfig,
+    uploadConfig: UploadConfig,
+    initialContent: unknown,
     readonly: boolean
 ): void {
     if (checkReady()) {
         console.log('✅ Initializing BlockNote widget immediately:', editorId);
-        initWidgetWithData(editorId, config, initialContent, readonly);
+        initWidgetWithData(editorId, editorConfig, uploadConfig, initialContent, readonly);  // ← Fixed
     } else {
         console.log('⏳ Queueing BlockNote widget:', editorId);
-        pendingWidgets.push({ editorId, config, initialContent, readonly });
+        pendingWidgets.push({ editorId, editorConfig, uploadConfig, initialContent, readonly });  // ← Fixed
     }
 }
 
@@ -70,7 +80,13 @@ function processPending(): void {
     if (checkReady() && pendingWidgets.length > 0) {
         console.log('🚀 Processing', pendingWidgets.length, 'pending widgets');
         pendingWidgets.forEach((widget: WidgetData) => {
-            initWidgetWithData(widget.editorId, widget.config, widget.initialContent, widget.readonly);
+            initWidgetWithData(
+                widget.editorId,
+                widget.editorConfig,    // ← Fixed from widget.config
+                widget.uploadConfig,
+                widget.initialContent,
+                widget.readonly
+            );
         });
         pendingWidgets = [];
         isReady = true;
@@ -128,10 +144,9 @@ console.log('Available functions:', Object.keys(window.DjangoBlockNote));
 
 // Dispatch a custom event to signal that BlockNote is ready
 document.dispatchEvent(new CustomEvent('blocknote-ready', {
-    detail: { 
+    detail: {
         timestamp: Date.now(),
         functions: Object.keys(window.DjangoBlockNote)
     }
 }));
 
-// NO EXPORTS - This file creates the global object and that's it!

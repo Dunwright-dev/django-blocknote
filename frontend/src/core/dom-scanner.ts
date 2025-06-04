@@ -1,11 +1,19 @@
 // core/dom-scanner.ts
+import type { EditorConfig, UploadConfig } from '../types';
+
 export function scanForWidgets(
     rootElement: Document | Element = document,
-    initWidgetCallback: (editorId: string, config: Record<string, unknown>, initialContent: unknown, readonly: boolean) => void
+    initWidgetCallback: (
+        editorId: string,
+        editorConfig: EditorConfig,
+        uploadConfig: UploadConfig,
+        initialContent: unknown,
+        readonly: boolean
+    ) => void
 ): void {
     console.log('🔍 Scanning for BlockNote widgets...');
 
-    // Find all BlockNote containers (both editors and viewers)
+    // Find all BlockNote containers
     const containers = rootElement.querySelectorAll('[data-editor-id]');
     console.log(`Found ${containers.length} potential widget containers`);
 
@@ -20,22 +28,46 @@ export function scanForWidgets(
 
         console.log(`📝 Processing ${isReadonly ? 'viewer' : 'widget'}: ${editorId}`);
 
-        // Get configuration from data attribute
-        let config = {};
-        const configAttr = container.getAttribute('data-blocknote-config');
-        if (configAttr) {
+        // Get EDITOR configuration from script tag with ID "_editor_config"
+        let editorConfig = {};
+        const editorConfigScript = document.getElementById(`${editorId}_editor_config`);
+        if (editorConfigScript) {
             try {
-                config = JSON.parse(configAttr);
-                console.log(`📋 Config loaded for ${editorId}:`, config);
+                editorConfig = JSON.parse(editorConfigScript.textContent || '{}');
+                console.log(`📋 Editor config loaded for ${editorId}:`, editorConfig);
             } catch (e) {
-                console.warn(`⚠️ Invalid config for ${editorId}:`, e);
+                console.warn(`⚠️ Invalid editor config for ${editorId}:`, e);
             }
         }
 
-        // Get content - try multiple sources
-        let content = [];
+        // Get UPLOAD configuration from script tag with ID "_image_upload_config"
+        let uploadConfig = {};
+        const imageUploadConfigScript = document.getElementById(`${editorId}_image_upload_config`);
 
-        // Method 1: From script tag (your current template uses this)
+        // Fixed: log the correct variable name
+        console.log(`🔍 Looking for upload config script: ${editorId}_image_upload_config`);
+        console.log(`📜 Upload config script element:`, imageUploadConfigScript);
+
+        if (imageUploadConfigScript) {
+            try {
+                // Fixed: assign to the correct variable
+                uploadConfig = JSON.parse(imageUploadConfigScript.textContent || '{}');
+                console.log(`📤 Upload config loaded for ${editorId}:`, uploadConfig);
+            } catch (e) {
+                console.warn(`⚠️ Invalid upload config for ${editorId}:`, e);
+            }
+        } else {
+            console.error(`❌ No image upload config script found for ${editorId}_image_upload_config`);
+        }
+
+        if (!uploadConfig.uploadUrl) {
+            console.error(`❌ Missing uploadUrl for ${editorId} - check Django widget configuration`);
+            console.log(`Upload Config for ${editorId} is`, uploadConfig);
+            return; // Don't initialize broken widget
+        }
+
+        // Get content from script tag with ID "_content"
+        let content = [];
         const contentScript = document.getElementById(`${editorId}_content`);
         if (contentScript) {
             try {
@@ -46,7 +78,7 @@ export function scanForWidgets(
             }
         }
 
-        // Method 2: From data attribute (fallback)
+        // Fallback methods for content
         if (!content.length) {
             const contentAttr = container.getAttribute('data-blocknote-content');
             if (contentAttr) {
@@ -59,22 +91,10 @@ export function scanForWidgets(
             }
         }
 
-        // Method 3: From textarea (another fallback)
-        if (!content.length) {
-            const textarea = rootElement.querySelector(`#${editorId}`) as HTMLTextAreaElement;
-            if (textarea && textarea.value) {
-                try {
-                    content = JSON.parse(textarea.value);
-                    console.log(`📄 Content loaded from textarea for ${editorId}:`, content);
-                } catch (e) {
-                    console.warn(`⚠️ Failed to parse textarea content for ${editorId}:`, e);
-                }
-            }
-        }
-
-        // Initialize using the callback (this is the key fix!)
+        // Initialize with separate configs
         console.log(`✅ Initializing BlockNote ${isReadonly ? 'viewer' : 'widget'}: ${editorId}`);
-        initWidgetCallback(editorId, config, content, isReadonly);
+
+        initWidgetCallback(editorId, editorConfig, uploadConfig, content, isReadonly);
     });
 
     console.log('✅ Widget scanning complete');
