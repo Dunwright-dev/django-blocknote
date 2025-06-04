@@ -2,12 +2,21 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BlockNoteEditor } from './editor';
 
+import type {
+    EditorConfig,
+    UploadConfig,
+} from './types';
 // Enhanced widget initialization with cleanup tracking
 export const blockNoteRoots = new Map(); // Track React roots for cleanup
 
-export function initWidgetWithData(editorId: string, config: Record<string, unknown> = {}, initialContent: unknown = null, readonly: boolean = false) {
+export function initWidgetWithData(
+    editorId: string,
+    editorConfig: EditorConfig,
+    uploadConfig: UploadConfig,
+    initialContent: unknown = null,
+    readonly: boolean = false
+): void {  // ← Add return type
     console.log('Initializing BlockNote widget:', editorId);
-
     const container = document.getElementById(editorId + '_editor');
     const textarea = document.getElementById(editorId);
 
@@ -16,22 +25,9 @@ export function initWidgetWithData(editorId: string, config: Record<string, unkn
         return;
     }
 
-    // Read upload config from DOM
-    const uploadConfigElement = document.getElementById(`${editorId}_upload_config`);
-    let uploadConfig: Record<string, unknown> = {};
-
-    if (uploadConfigElement) {
-        try {
-            const uploadConfigText = uploadConfigElement.textContent || '{}';
-            uploadConfig = JSON.parse(uploadConfigText);
-            console.log('📤 Upload config loaded for', editorId, ':', uploadConfig);
-        } catch (error) {
-            console.warn('⚠️ Failed to parse upload config for', editorId, ':', error);
-            uploadConfig = {}; // Fallback to empty config
-        }
-    } else {
-        console.log('📤 No upload config found for', editorId, ', using defaults');
-    }
+    // ❌ REMOVE - upload config is already passed as parameter
+    // const uploadConfigElement = document.getElementById(`${editorId}_upload_config`);
+    // ... remove all this upload config reading code ...
 
     // Cleanup existing React root if it exists
     if (blockNoteRoots.has(editorId)) {
@@ -52,16 +48,14 @@ export function initWidgetWithData(editorId: string, config: Record<string, unkn
 
     // Process initial content and ensure it's valid JSON
     let processedContent: unknown = null;
-    let textareaInitialValue = '[]'; // Default fallback for textarea
+    let textareaInitialValue = '[]';
 
     if (initialContent && Array.isArray(initialContent) && initialContent.length > 0) {
         processedContent = initialContent;
         textareaInitialValue = JSON.stringify(initialContent);
     } else {
-        // For empty editors, let BlockNote create its own default content
-        // but ensure textarea has valid JSON
-        processedContent = undefined; // Let BlockNote handle empty state
-        textareaInitialValue = '[]'; // Valid empty JSON for Django form validation
+        processedContent = undefined;
+        textareaInitialValue = '[]';
     }
 
     // This prevents "Enter a valid JSON" errors on form submission
@@ -71,7 +65,7 @@ export function initWidgetWithData(editorId: string, config: Record<string, unkn
         console.log(`🔧 Initialized textarea for ${editorId} with valid JSON:`, textareaInitialValue);
     } catch (error) {
         console.error(`❌ Failed to initialize textarea JSON for ${editorId}:`, error);
-        textareaElement.value = '[]'; // Ultimate fallback
+        textareaElement.value = '[]';
     }
 
     // Extract fallback text
@@ -97,19 +91,13 @@ export function initWidgetWithData(editorId: string, config: Record<string, unkn
     // Change handler with error handling
     const handleChange = (content: unknown) => {
         try {
-            // Ensure content is serializable
             const jsonContent = JSON.stringify(content || []);
             textareaElement.value = jsonContent;
-
-            // Dispatch change event for Django forms
             textareaElement.dispatchEvent(new Event('change', { bubbles: true }));
             textareaElement.dispatchEvent(new Event('input', { bubbles: true }));
-
             console.log(`📝 Updated textarea for ${editorId}`);
         } catch (error) {
             console.error(`❌ Error updating textarea for ${editorId}:`, error);
-
-            // Fallback: set to empty array if JSON serialization fails
             textareaElement.value = '[]';
             textareaElement.dispatchEvent(new Event('change', { bubbles: true }));
         }
@@ -119,35 +107,27 @@ export function initWidgetWithData(editorId: string, config: Record<string, unkn
         const element = React.createElement(BlockNoteEditor, {
             editorId: editorId,
             initialContent: processedContent,
-            config: {
-                ...config,
-            },
-            uploadConfig: uploadConfig,
+            editorConfig: editorConfig,  // ← Fixed: was config
+            uploadConfig: uploadConfig,  // ← Use parameter, not local variable
             onChange: handleChange,
             readonly: readonly,
         });
 
         const root = createRoot(container);
         root.render(element);
-
-        // Store root for cleanup
         blockNoteRoots.set(editorId, root);
-
         console.log('✅ BlockNote widget rendered successfully:', editorId);
 
     } catch (error) {
         console.error('Critical widget initialization error:', error);
-
-        // Ultimate fallback - but still ensure valid JSON in textarea
         textareaElement.value = '[]';
-
         container.innerHTML = `
             <div style="border: 2px solid #ef4444; padding: 16px; border-radius: 8px; background: #fef2f2;">
                 <div style="font-weight: 600; margin-bottom: 8px; color: #dc2626;">
                     ⚠️ Editor Initialization Failed
                 </div>
                 <textarea 
-                    placeholder="${(config.placeholder as string) || 'Enter your content here...'}"
+                    placeholder="${(editorConfig.placeholder as string) || 'Enter your content here...'}"
                     style="width: 100%; min-height: 200px; padding: 12px; border: 1px solid #d1d5db; border-radius: 4px; font-family: system-ui;"
                     oninput="
                         const content = this.value ? [{

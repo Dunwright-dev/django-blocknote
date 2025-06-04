@@ -3,8 +3,7 @@
  * Public API for all custom hooks
  */
 
-export { useBlockNoteUpload } from './useBlockNoteUpload';
-
+export { useBlockNoteImageUpload } from './useBlockNoteImageUpload';
 // Future hook exports will go here:
 // export { useBlockNoteEditor } from './useBlockNoteEditor';
 // export { useBlockNoteValidation } from './useBlockNoteValidation';
