@@ -17,7 +17,10 @@ class DjangoBlockNoteConfig(AppConfig):
             settings.DJ_BN_BULK_CREATE_BATCH_SIZE: int = 50  # type: ignore[attr-defined]
         if not hasattr(settings, "DJ_BN_IMAGE_DELETION"):
             settings.DJ_BN_IMAGE_DELETION: bool = True  # type: ignore[attr-defined]
-        if not hasattr(settings, "DJ_BN_PERMITTED_IMAGE_TYPES"):
+        if not hasattr(
+            settings,
+            "DJ_BN_PERMITTED_IMAGE_TYPES",
+        ):  # For backend checks with filetype
             settings.DJ_BN_PERMITTED_IMAGE_TYPES: list[str] = [  # type: ignore[attr-defined]
                 "jpg",
                 "jpeg",
@@ -29,8 +32,11 @@ class DjangoBlockNoteConfig(AppConfig):
             ]
         if not hasattr(settings, "DJ_BN_IMAGE_FORMATTER"):
             settings.DJ_BN_IMAGE_FORMATTER = (
-                "django_ckeditors.image.convert_image_to_webp"
+                "django_blocknote.image.convert_image_to_webp"
             )
+        if not hasattr(settings, "DJ_BN_IMAGE_STORAGE"):
+            settings.DJ_BN_IMAGE_STORAGE = ""
+
         if not hasattr(settings, "DJ_BN_IMAGE_URL_HANDLER"):
             settings.DJ_BN_IMAGE_URL_HANDLER: str = ""  # type: ignore[attr-defined]
 
@@ -47,26 +53,131 @@ class DjangoBlockNoteConfig(AppConfig):
             settings.DJ_BN_UPLOAD_PATH = (
                 "blocknote_uploads"  # Directory within MEDIA_ROOT
             )
+        if not hasattr(settings, "DJ_BN_VIEWER_CONFIG"):
+            settings.DJ_BN_VIEWER_CONFIG = {
+                "theme": "light",  # or "dark"
+                "animations": True,
+                "showImageCaptions": True,
+                "allowImageZoom": True,
+            }
 
-        # Allowed image types
-        if not hasattr(settings, "DJ_BN_ALLOWED_FILE_TYPES"):
-            settings.DJ_BN_ALLOWED_FILE_TYPES = [
-                "image/jpeg",
-                "image/png",
-                "image/gif",
-                "image/webp",
-            ]
+        if not hasattr(settings, "DJ_BN_IMAGE_UPLOAD_CONFIG"):
+            settings.DJ_BN_IMAGE_UPLOAD_CONFIG = {
+                # Core Upload Settings
+                "uploadUrl": "/django-blocknote/upload-image/",
+                "maxFileSize": 10 * 1024 * 1024,  # 10MB
+                "allowedTypes": ["image/*"],
+                "showProgress": False,
+                "maxConcurrent": 3,
+                "img_model": "",  # Optional: Django model for custom image handling
+                # Upload Behavior
+                "timeout": 30000,  # Upload timeout in milliseconds
+                "chunkSize": 1024 * 1024,  # Upload chunk size for large files
+                "retryAttempts": 3,  # Number of retry attempts on failure
+                "retryDelay": 1000,  # Delay between retries in milliseconds
+                # Image Processing
+                "autoResize": True,  # Auto-resize large images
+                "maxWidth": 1920,  # Max width for resized images
+                "maxHeight": 1080,  # Max height for resized images
+                "quality": 85,  # JPEG compression quality (1-100)
+                "format": "auto",  # Output format: "auto", "jpeg", "png", "webp"
+                #
+                # NOTE:Not implemented, for future consideration.
+                #
+                # Storage & Naming
+                # "uploadPath": "blocknote/images/",  # Storage path within MEDIA_ROOT  # noqa:  E501,ERA001
+                # "generateThumbnails": False,  # Generate thumbnail versions  # noqa:  E501,ERA001
+                # "thumbnailSizes": [150, 300],  # Thumbnail widths if enabled  # noqa:  E501,ERA001
+                # "filenamePrefix": "",  # Prefix for uploaded filenames  # noqa: ERA001
+                # "preserveFilename": False,  # Keep original filename vs generated  # noqa:  E501,ERA001
+                # Security & Validation
+                # "validateDimensions": False,  # Validate image dimensions # noqa: E501, ERA001
+                # "minWidth": 0,  # Minimum image width  # noqa: ERA001
+                # "minHeight": 0,  # Minimum image height  # noqa:  ERA001
+                # "maxDimensions": 4096,  # Maximum width or height  # noqa: E501, ERA001
+                # "allowSvg": False,  # Allow SVG uploads (security consideration)  # noqa: E501, ERA001
+                # "scanForMalware": False,  # Enable malware scanning if available  # noqa: E501, ERA001
+                # UI/UX
+                # "showPreview": True,  # Show image preview during upload  # noqa:  E501,ERA001
+                # "dragDropEnabled": True,  # Enable drag & drop uploads  # noqa: ERA001
+                # "pasteEnabled": True,  # Enable paste from clipboard  # noqa: ERA001
+                # "cropEnabled": False,  # Enable image cropping UI  # noqa: ERA001
+                # "rotateEnabled": False,  # Enable image rotation  # noqa: ERA001
+                # Integration
+                # "csrfTokenSource": "form",  # "form", "meta", "cookie"  # noqa: ERA001
+                # "customHeaders": {},  # Additional HTTP headers  # noqa: ERA001
+                # "transformResponse": None,  # Custom response transformation  # noqa: E501, ERA001
+            }
+        # NOTE: Future use
+
+        # if not hasattr(settings, "DJ_BN_ALLOWED_FILE_TYPES"):
+        #     settings.DJ_BN_ALLOWED_FILE_TYPES = [
+        #         "image/jpeg",
+        #         "image/png",
+        #         "image/gif",
+        #         "image/webp",
+        #     ]
 
         # Allowed document types (for file uploads)
-        if not hasattr(settings, "DJ_BN_ALLOWED_DOCUMENT_TYPES"):
-            settings.DJ_BN_ALLOWED_DOCUMENT_TYPES = [
-                "application/pdf",
-                "application/msword",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                "text/plain",
-            ]
+        # if not hasattr(settings, "DJ_BN_ALLOWED_DOCUMENT_TYPES"):
+        #     settings.DJ_BN_ALLOWED_DOCUMENT_TYPES = [
+        #         "application/pdf",
+        #         "application/msword",
+        #         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        #         "text/plain",
+        #     ]
 
         self._configure_blocknote_settings()
+
+    # TODO: Update with DJ_BN and tie in with ones above
+    def _configure_blocknote_settings(self):
+        """Set up BlockNote-specific settings with defaults."""
+        default_blocknote_config = {
+            "DEFAULT_CONFIG": {
+                "placeholder": "Start writing...",
+                "editable": True,
+                "theme": "light",
+                "animations": True,
+                "collaboration": False,
+            },
+            "WIDGET_CONFIG": {
+                "include_css": True,
+                "include_js": True,
+                "css_class": "django-blocknote-widget",
+            },
+            "FIELD_CONFIG": {
+                "null": True,
+                "blank": True,
+                "default": dict,
+            },
+            # "STATIC_URL": "/static/django_blocknote/",
+            "DEBUG": getattr(settings, "DEBUG", False),
+        }
+
+        # Merge with user settings if they exist
+        user_config = getattr(settings, "DJANGO_BLOCKNOTE", {})
+
+        # Deep merge the configurations
+        merged_config = self._deep_merge_dict(default_blocknote_config, user_config)
+
+        # Set the final configuration
+        settings.DJANGO_BLOCKNOTE = merged_config
+
+    def _deep_merge_dict(self, default_dict, user_dict):
+        """Recursively merge user configuration with defaults."""
+        result = default_dict.copy()
+
+        for key, value in user_dict.items():
+            if (
+                key in result
+                and isinstance(result[key], dict)
+                and isinstance(value, dict)
+            ):
+                result[key] = self._deep_merge_dict(result[key], value)
+            else:
+                result[key] = value
+
+        return result
 
     #     try:
     #         self._enhance_admin_classes()
@@ -183,52 +294,3 @@ class DjangoBlockNoteConfig(AppConfig):
     #     except Exception as e:
     #         logger.error(f"Error in admin enhancement: {e}")
     #         # Don't break the app if admin enhancement fails
-
-    def _configure_blocknote_settings(self):
-        """Set up BlockNote-specific settings with defaults."""
-        default_blocknote_config = {
-            "DEFAULT_CONFIG": {
-                "placeholder": "Start writing...",
-                "editable": True,
-                "theme": "light",
-                "animations": True,
-                "collaboration": False,
-            },
-            "WIDGET_CONFIG": {
-                "include_css": True,
-                "include_js": True,
-                "css_class": "django-blocknote-widget",
-            },
-            "FIELD_CONFIG": {
-                "null": True,
-                "blank": True,
-                "default": dict,
-            },
-            "STATIC_URL": "/static/django_blocknote/",
-            "DEBUG": getattr(settings, "DEBUG", False),
-        }
-
-        # Merge with user settings if they exist
-        user_config = getattr(settings, "DJANGO_BLOCKNOTE", {})
-
-        # Deep merge the configurations
-        merged_config = self._deep_merge_dict(default_blocknote_config, user_config)
-
-        # Set the final configuration
-        settings.DJANGO_BLOCKNOTE = merged_config
-
-    def _deep_merge_dict(self, default_dict, user_dict):
-        """Recursively merge user configuration with defaults."""
-        result = default_dict.copy()
-
-        for key, value in user_dict.items():
-            if (
-                key in result
-                and isinstance(result[key], dict)
-                and isinstance(value, dict)
-            ):
-                result[key] = self._deep_merge_dict(result[key], value)
-            else:
-                result[key] = value
-
-        return result
