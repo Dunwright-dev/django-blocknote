@@ -7,13 +7,11 @@
                 padding: 16px;
                 background: #ffffff;
                 min-height: 100px">
-
         <!-- Hidden textarea (required for widget structure) -->
         <textarea name="{{ container_id }}"
                   id="{{ container_id }}"
                   style="display: none"
                   data-readonly="true">{{ content_json|safe }}</textarea>
-
         <!-- Editor container that matches the scanner expectations -->
         <div class="blocknote-loading"
              id="{{ container_id }}_editor"
@@ -21,7 +19,10 @@
              data-readonly="true"
              data-blocknote-config="{}"
              data-blocknote-content="{{ content_json|escape }}">
-            <div style="display: flex; align-items: center; justify-content: center; min-height: 60px;">
+            <div style="display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        min-height: 60px">
                 <div style="text-align: center;">
                     <div style="margin-bottom: 8px; font-size: 14px;">📖 Loading content...</div>
                     <div style="font-size: 12px; color: #6b7280;">Rendering rich text content</div>
@@ -42,3 +43,7 @@
         <div>No content to display</div>
     </div>
 {% endif %}
+<!-- Configuration scripts -->
+<script type="application/json" id="{{ container_id }}_content">{{ content_json|safe }}</script>
+<script type="application/json" id="{{ container_id }}_editor_config">{{ editor_config|safe }}</script>
+<script type="application/json" id="{{ container_id }}_image_upload_config">{{ image_upload_config|safe }}</script>

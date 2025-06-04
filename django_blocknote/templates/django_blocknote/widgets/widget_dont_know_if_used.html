@@ -1,14 +1,13 @@
 {% load static %}
-<div class="django-blocknote-container" data-field-name="{{ widget.name }}">
-    <textarea 
-        name="{{ widget.name }}" 
-        id="{{ widget.attrs.id }}"{% if widget.attrs.class %} 
-        class="{{ widget.attrs.class }}"{% endif %}
-        data-blocknote-config="{{ widget.config_json|escapejs }}"
-        style="display: none;">{{ widget.value|default:"" }}</textarea>
+<div class="django-blocknote-container"
+     data-field-name="{{ widget.name }}">
+    <textarea name="{{ widget.name }}"
+              id="{{ widget.attrs.id }}"
+              {% if widget.attrs.class %} class="{{ widget.attrs.class }}"{% endif %}
+              data-blocknote-config="{{ widget.config_json|escapejs }}"
+              style="display: none">{{ widget.value|default:"" }}</textarea>
     <div class="blocknote-editor" id="editor-{{ widget.attrs.id }}"></div>
 </div>
-
 <script>
 (function() {
     // Use IIFE to avoid global variable conflicts
