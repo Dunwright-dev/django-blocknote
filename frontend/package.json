@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NODE_ENV=development vite build",
-    "watch": "NODE_ENV=development vite build --watch",
+    "dev": "NODE_ENV=development vite build --mode development --logLevel warn",
+    "watch": "NODE_ENV=development vite build --watch --mode development",
     "serve": "vite --port 5174",
-    "prod": "NODE_ENV=production vite build",
+    "prod": "NODE_ENV=production vite build --mode production",
     "preview": "vite preview",
     "clean": "rm -rf ../django_blocknote/static/django_blocknote/dist/* && rm -rf ../django_blocknote/static/django_blocknote/dist/.vite"
   },
@@ -27,4 +27,3 @@
     "vite": "^6.3.5"
   }
 }
-
