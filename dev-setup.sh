@@ -559,7 +559,14 @@ BLOG_URLS_EOF
 
 cat > blog/admin.py << 'ADMIN_EOF'
 from django.contrib import admin
-from .models import BlogPost, Comment
+from .models import BlogPost, Comment 
+from django_blocknote.models import UnusedImageURLS
+
+@admin.register(UnusedImageURLS)
+class UnusedImageURLSAdmin(admin.ModelAdmin):
+    list_display = ['user','image_url', 'created', 'deleted', 'processing', 'deletion_error', 'retry_count']
+    search_fields = ['user','image_url']
+    list_filter = ['user','created', 'deleted', 'processing']
 
 @admin.register(BlogPost)
 class BlogPostAdmin(admin.ModelAdmin):
