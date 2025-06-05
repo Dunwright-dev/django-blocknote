@@ -215,6 +215,14 @@ DJ_BN_IMAGE_UPLOAD_CONFIG = {
     "img_model": "",  # Optional: Django model for custom image handling
 }
 
+DJ_BN_IMAGE_REMOVAL_CONFIG = {
+    "removalUrl": "/django-blocknote/remove-image/",
+    "retryAttempts": 3,
+    "retryDelay": 1000,
+    "timeout": 30000,
+    "maxConcurrent": 1,
+}
+
 # Widget configuration
 DJANGO_BLOCKNOTE = {
     'DEFAULT_CONFIG': {
@@ -318,7 +326,11 @@ class BlogPost(models.Model):
             'img_model': 'blog:BlogPost',  # app:model format
             'maxFileSize': 10 * 1024 * 1024,  # 10MB
             'allowedTypes': ['image/*']
-        }
+        },
+        image_removal_config={
+            'removalUrl': '/django-blocknote/remove-image/',
+            'retryAttempts': 3,
+        },
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
