@@ -1,5 +1,5 @@
 // core/dom-scanner.ts
-import type { EditorConfig, UploadConfig } from '../types';
+import type { EditorConfig, UploadConfig, RemovalConfig } from '../types';
 
 export function scanForWidgets(
     rootElement: Document | Element = document,
@@ -7,6 +7,7 @@ export function scanForWidgets(
         editorId: string,
         editorConfig: EditorConfig,
         uploadConfig: UploadConfig,
+        removalConfig: RemovalConfig,
         initialContent: unknown,
         readonly: boolean
     ) => void
@@ -43,14 +44,11 @@ export function scanForWidgets(
         // Get UPLOAD configuration from script tag with ID "_image_upload_config"
         let uploadConfig = {};
         const imageUploadConfigScript = document.getElementById(`${editorId}_image_upload_config`);
-
-        // Fixed: log the correct variable name
         console.log(`🔍 Looking for upload config script: ${editorId}_image_upload_config`);
         console.log(`📜 Upload config script element:`, imageUploadConfigScript);
 
         if (imageUploadConfigScript) {
             try {
-                // Fixed: assign to the correct variable
                 uploadConfig = JSON.parse(imageUploadConfigScript.textContent || '{}');
                 console.log(`📤 Upload config loaded for ${editorId}:`, uploadConfig);
             } catch (e) {
@@ -63,6 +61,29 @@ export function scanForWidgets(
         if (!uploadConfig.uploadUrl) {
             console.error(`❌ Missing uploadUrl for ${editorId} - check Django widget configuration`);
             console.log(`Upload Config for ${editorId} is`, uploadConfig);
+            return; // Don't initialize broken widget
+        }
+
+        // Get REMOVAL configuration from script tag with ID "_image_removal_config"
+        let removalConfig = {};
+        const imageRemovalConfigScript = document.getElementById(`${editorId}_image_removal_config`);
+        console.log(`🔍 Looking for removal config script: ${editorId}_image_removal_config`);
+        console.log(`📜 Removal config script element:`, imageRemovalConfigScript);
+
+        if (imageRemovalConfigScript) {
+            try {
+                removalConfig = JSON.parse(imageRemovalConfigScript.textContent || '{}');
+                console.log(`🗑️ Removal config loaded for ${editorId}:`, removalConfig);
+            } catch (e) {
+                console.warn(`⚠️ Invalid removal config for ${editorId}:`, e);
+            }
+        } else {
+            console.error(`❌ No image removal config script found for ${editorId}_image_removal_config`);
+        }
+
+        if (!removalConfig.removalUrl) {
+            console.error(`❌ Missing removalUrl for ${editorId} - check Django widget configuration`);
+            console.log(`Removal Config for ${editorId} is`, removalConfig);
             return; // Don't initialize broken widget
         }
 
@@ -91,10 +112,9 @@ export function scanForWidgets(
             }
         }
 
-        // Initialize with separate configs
+        // Initialize with all configs
         console.log(`✅ Initializing BlockNote ${isReadonly ? 'viewer' : 'widget'}: ${editorId}`);
-
-        initWidgetCallback(editorId, editorConfig, uploadConfig, content, isReadonly);
+        initWidgetCallback(editorId, editorConfig, uploadConfig, removalConfig, content, isReadonly);
     });
 
     console.log('✅ Widget scanning complete');

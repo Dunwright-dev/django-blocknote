@@ -5,7 +5,8 @@ import { BlockNoteEditor } from './editor';
 import type {
     EditorConfig,
     UploadConfig,
-} from './types';
+    RemovalConfig,
+} from '../types';
 // Enhanced widget initialization with cleanup tracking
 export const blockNoteRoots = new Map(); // Track React roots for cleanup
 
@@ -13,9 +14,10 @@ export function initWidgetWithData(
     editorId: string,
     editorConfig: EditorConfig,
     uploadConfig: UploadConfig,
+    removalConfig: RemovalConfig,
     initialContent: unknown = null,
     readonly: boolean = false
-): void {  // ← Add return type
+): void {
     console.log('Initializing BlockNote widget:', editorId);
     const container = document.getElementById(editorId + '_editor');
     const textarea = document.getElementById(editorId);
@@ -24,10 +26,6 @@ export function initWidgetWithData(
         console.error('Elements not found for editor:', editorId);
         return;
     }
-
-    // ❌ REMOVE - upload config is already passed as parameter
-    // const uploadConfigElement = document.getElementById(`${editorId}_upload_config`);
-    // ... remove all this upload config reading code ...
 
     // Cleanup existing React root if it exists
     if (blockNoteRoots.has(editorId)) {
@@ -109,6 +107,7 @@ export function initWidgetWithData(
             initialContent: processedContent,
             editorConfig: editorConfig,  // ← Fixed: was config
             uploadConfig: uploadConfig,  // ← Use parameter, not local variable
+            removalConfig: removalConfig,
             onChange: handleChange,
             readonly: readonly,
         });
