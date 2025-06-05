@@ -28,3 +28,25 @@ export interface DjangoUploadError {
  * CSRF token sources
  */
 export type CsrfTokenSource = 'form' | 'meta' | 'cookie';
+
+/**
+ * Response from Django removal endpoint
+ */
+export interface DjangoRemovalResponse {
+    /** Success response */
+    success: {
+        message: string;
+    };
+}
+
+/**
+ * Error response from Django removal endpoint
+ */
+export interface DjangoRemovalError {
+    /** Error response */
+    error: {
+        message: string;
+    };
+    /** Error code for programmatic handling */
+    code?: string;
+}

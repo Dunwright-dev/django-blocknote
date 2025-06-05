@@ -1,11 +1,17 @@
 import React from 'react';
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
-import { useBlockNoteImageUpload } from '../hooks';
+import { findRemovedImages } from '../utils/documents';
+import {
+    useBlockNoteImageUpload,
+    useBlockNoteImageRemoval,
+} from '../hooks';
 import type {
     EditorConfig,
     UploadConfig,
     ImageUploadConfig,
+    RemovalConfig,
+    ImageRemovalConfig,
 } from '../types';
 
 // Main BlockNote Editor Component
@@ -16,6 +22,7 @@ export function BlockNoteEditor({
     onChange = null,
     readonly = false,
     uploadConfig = {},
+    removalConfig = {},
 }: {
     editorId: string;
     initialContent?: any;
@@ -23,14 +30,20 @@ export function BlockNoteEditor({
     onChange?: ((content: any) => void) | null;
     readonly?: boolean;
     uploadConfig?: UploadConfig;  // Union type - future ready
+    removalConfig?: RemovalConfig;
 }) {
     console.log('Creating BlockNote 0.31.0 editor...');
 
     // Use upload hook - cast to ImageUploadConfig since we know it's images for now
     const { uploadFile } = useBlockNoteImageUpload(uploadConfig as ImageUploadConfig);
 
+    const { removeImages } = useBlockNoteImageRemoval(removalConfig as ImageRemovalConfig);
+
     // State to track readonly status
     const [isReadonly, setIsReadonly] = React.useState(readonly);
+    //
+    // Track previous document state
+    const [previousDocument, setPreviousDocument] = React.useState(initialContent);
 
     // Create editor with upload configuration
     const editor = useCreateBlockNote({
@@ -74,21 +87,40 @@ export function BlockNoteEditor({
         };
     }, [editor, editorId]);
 
-    // Handle content changes
+    // handleChange with image removal detection
     const handleChange = React.useCallback(() => {
         const isEditable = editorConfig.isEditable !== undefined ? editorConfig.isEditable : !readonly;
-        if (onChange && isEditable && editor) {
+        if (editor && isEditable) {
             try {
-                const content = editor.document;
-                onChange(content);
-                document.dispatchEvent(new CustomEvent('blocknote-change', {
-                    detail: { content, editor }
-                }));
+                const currentContent = editor.document;
+
+                // Check for removed images
+                if (previousDocument) {
+                    const removedUrls = findRemovedImages(previousDocument, currentContent);
+                    if (removedUrls.length > 0) {
+                        console.log('🗑️ Detected removed images, sending for cleanup:', removedUrls);
+                        removeImages(removedUrls).catch(error => {
+                            console.error('❌ Failed to remove images:', error);
+                            // Don't block the editor change for removal failures
+                        });
+                    }
+                }
+
+                // Update previous document for next comparison
+                setPreviousDocument(currentContent);
+
+                // Existing onChange logic
+                if (onChange) {
+                    onChange(currentContent);
+                    document.dispatchEvent(new CustomEvent('blocknote-change', {
+                        detail: { content: currentContent, editor }
+                    }));
+                }
             } catch (error) {
-                console.warn('Error getting editor content:', error);
+                console.warn('Error during editor change handling:', error);
             }
         }
-    }, [onChange, readonly, editor, editorConfig.isEditable]);
+    }, [onChange, readonly, editor, editorConfig.isEditable, previousDocument, removeImages]);
 
     // Use editorConfig.isEditable if available, otherwise fall back to !readonly
     const isEditable = editorConfig.isEditable !== undefined ? editorConfig.isEditable : !readonly;

@@ -11,6 +11,7 @@ import { checkReady } from './utils/helpers';
 import type {
     EditorConfig,
     UploadConfig,
+    RemovalConfig,
 } from './types';
 
 console.log('Loading BlockNote 0.31.0 with React 19 (HTMX compatible)...');
@@ -23,6 +24,7 @@ interface WidgetData {
     editorId: string;
     editorConfig: EditorConfig;
     uploadConfig: UploadConfig;
+    removalConfig: RemovalConfig;
     initialContent: unknown;
     readonly: boolean;
 }
@@ -41,6 +43,7 @@ interface DjangoBlockNoteAPI {
         editorId: string,
         editorConfig: EditorConfig,
         uploadConfig: UploadConfig,
+        removalConfig: RemovalConfig,
         initialContent: unknown,
         readonly: boolean
     ) => void;
@@ -63,15 +66,16 @@ function initWidget(
     editorId: string,
     editorConfig: EditorConfig,
     uploadConfig: UploadConfig,
+    removalConfig: RemovalConfig,
     initialContent: unknown,
     readonly: boolean
 ): void {
     if (checkReady()) {
         console.log('✅ Initializing BlockNote widget immediately:', editorId);
-        initWidgetWithData(editorId, editorConfig, uploadConfig, initialContent, readonly);  // ← Fixed
+        initWidgetWithData(editorId, editorConfig, uploadConfig, removalConfig, initialContent, readonly);
     } else {
         console.log('⏳ Queueing BlockNote widget:', editorId);
-        pendingWidgets.push({ editorId, editorConfig, uploadConfig, initialContent, readonly });  // ← Fixed
+        pendingWidgets.push({ editorId, editorConfig, uploadConfig, removalConfig, initialContent, readonly });
     }
 }
 
@@ -82,10 +86,11 @@ function processPending(): void {
         pendingWidgets.forEach((widget: WidgetData) => {
             initWidgetWithData(
                 widget.editorId,
-                widget.editorConfig,    // ← Fixed from widget.config
+                widget.editorConfig,
                 widget.uploadConfig,
+                widget.removalConfig,
                 widget.initialContent,
-                widget.readonly
+                widget.readonly,
             );
         });
         pendingWidgets = [];
@@ -131,7 +136,7 @@ document.addEventListener('htmx:load', function(event: HTMXEvent): void {
     }
 });
 
-// PUBLIC API - This is all that gets exposed globally
+// PUBLIC API
 window.DjangoBlockNote = {
     scanForWidgets: scanForWidgetsWithInit,
     initWidget,
