@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.06.06.3]
+
+### Maintenance
+- Register and Admin for UnusedImageURLS (admin) [#16](https://github.com/Dunwright-dev/django-blocknote/pull/16)
+
+
 ## [2025.06.06.2]
 
 ### Maintenance

@@ -2,7 +2,33 @@ from django.contrib import admin
 from django.template import Context, Template
 from django.utils.html import format_html
 
+from django_blocknote.models import UnusedImageURLS
+
 from .fields import BlockNoteField
+
+
+@admin.register(UnusedImageURLS)
+class UnusedImageURLSAdmin(admin.ModelAdmin):
+    list_display = [
+        "user",
+        "image_url",
+        "created",
+        "deleted",
+        "processing_stats",
+        "processing",
+        "deletion_error",
+        "retry_count",
+    ]
+    search_fields = [
+        "user",
+        "image_url",
+    ]
+    list_filter = [
+        "user",
+        "created",
+        "deleted",
+        "processing",
+    ]
 
 
 class BlockNoteAdminMixin:
