@@ -382,13 +382,13 @@ def blocknote_asset_debug():
     <div style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 1rem; margin: 1rem 0; font-family: monospace; font-size: 0.875rem;">
         <h4>🔧 BlockNote Asset Debug</h4>
         <p><strong>Manifest found:</strong> {manifest_exists}</p>
-        {f'<p><strong>Manifest path:</strong> {manifest_path}</p>' if manifest_exists else ''}
+        {f"<p><strong>Manifest path:</strong> {manifest_path}</p>" if manifest_exists else ""}
         <p><strong>CSS asset:</strong> {css_asset}</p>
         <p><strong>CSS URL:</strong> {css_url}</p>
         <p><strong>JS asset:</strong> {js_asset}</p>
         <p><strong>JS URL:</strong> {js_url}</p>
         <p><strong>STATIC_URL:</strong> {settings.STATIC_URL}</p>
-        <p><strong>STATICFILES_DIRS:</strong> {getattr(settings, 'STATICFILES_DIRS', [])}</p>
+        <p><strong>STATICFILES_DIRS:</strong> {getattr(settings, "STATICFILES_DIRS", [])}</p>
     </div>
     """
 
@@ -497,6 +497,8 @@ def blocknote_viewer(
 
     default_upload_config = getattr(settings, "DJ_BN_IMAGE_UPLOAD_CONFIG", {})
     image_upload_config = default_upload_config.copy()
+    default_removal_config = getattr(settings, "DJ_BN_IMAGE_REMOVAL_CONFIG", {})
+    image_removal_config = default_removal_config.copy()
 
     if "uploadUrl" not in image_upload_config:
         try:
@@ -505,6 +507,14 @@ def blocknote_viewer(
             image_upload_config["uploadUrl"] = "/django-blocknote/upload-image/"
 
     image_upload_config.update({"showProgress": False})
+
+    if "removalUrl" not in image_removal_config:
+        try:
+            image_removal_config["removalUrl"] = reverse(
+                "django_blocknote:remove_image",
+            )
+        except NoReverseMatch:
+            image_removal_config["removalUrl"] = "/django-blocknote/remove-image/"
 
     # Serialize configs
     content_json = json.dumps(content or [], cls=DjangoJSONEncoder, ensure_ascii=False)
@@ -518,6 +528,11 @@ def blocknote_viewer(
         cls=DjangoJSONEncoder,
         ensure_ascii=False,
     )
+    image_removal_config_json = json.dumps(
+        image_removal_config,
+        cls=DjangoJSONEncoder,
+        ensure_ascii=False,
+    )
 
     return {
         "container_id": container_id or f"blocknote_viewer_{uuid.uuid4().hex[:8]}",
@@ -526,4 +541,5 @@ def blocknote_viewer(
         "has_content": bool(content),
         "editor_config": editor_config_json,
         "image_upload_config": image_upload_config_json,
+        "image_removal_config": image_removal_config_json,
     }
