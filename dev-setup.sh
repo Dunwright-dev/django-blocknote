@@ -334,6 +334,7 @@ class BlogPost(models.Model):
             'removalUrl': '/django-blocknote/remove-image/',
             'retryAttempts': 3,
         },
+        menu_type='admin',
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -357,7 +358,8 @@ class Comment(models.Model):
             'img_model': 'blog:Comment',  # app:model format
             'maxFileSize': 2 * 1024 * 1024,  # 2MB for comments
             'allowedTypes': ['image/jpeg', 'image/png', 'image/gif']
-        }
+        },
+        # menu_type='_default',
     )
     created_at = models.DateTimeField(auto_now_add=True)
     

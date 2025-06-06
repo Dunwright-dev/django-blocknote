@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+
 const isProduction = process.env.NODE_ENV === 'production'
 
 export default defineConfig({
@@ -13,6 +14,7 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2022',
     rollupOptions: {
+      // Bundle everything - no externals for Django compatibility
       external: [],
       onwarn(warning, warn) {
         // Suppress "use client" directive warnings from Mantine
@@ -34,7 +36,26 @@ export default defineConfig({
             return 'css/[name].[hash][extname]'
           }
           return '[name].[hash][extname]'
-        }
+        },
+        // Add an outro to expose React and ReactDOM globally
+        outro: `
+          // Expose React and ReactDOM globally for Django compatibility
+          if (typeof window !== 'undefined') {
+            // Extract React from the bundle and expose it globally
+            const ReactModule = DjangoBlockNote._internal?.React;
+            const ReactDOMModule = DjangoBlockNote._internal?.ReactDOM;
+            
+            if (ReactModule && !window.React) {
+              window.React = ReactModule;
+              console.log('✅ React exposed globally from DjangoBlockNote bundle');
+            }
+            
+            if (ReactDOMModule && !window.ReactDOM) {
+              window.ReactDOM = ReactDOMModule;
+              console.log('✅ ReactDOM exposed globally from DjangoBlockNote bundle');
+            }
+          }
+        `
       }
     },
     sourcemap: !isProduction,
@@ -56,7 +77,7 @@ export default defineConfig({
   },
   // TypeScript and ES2022 configuration
   esbuild: {
-    target: 'es2022', // ES2022 support
+    target: 'es2022',
     drop: isProduction ? ['console', 'debugger'] : []
   },
   define: {
