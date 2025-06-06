@@ -204,17 +204,18 @@ def remove_image(request):
         trigger_cleanup_if_needed()
 
 
-# @csrf_exempt
-# @require_http_methods(["POST"])
-# def upload_file(request):
-#     """
-#     Handle general file uploads (documents, etc.)
-#     Similar to upload_image but with different allowed types
-#     """
-#     return JsonResponse(
-#         {"error": "File upload not permitted", "code": "PERMISSION"},
-#         status=400,
-#     )
+@csrf_exempt
+@require_http_methods(["POST"])
+def upload_file(request):
+    """
+    Handle general file uploads (documents, etc.)
+    Similar to upload_image but with different allowed types
+    """
+    return JsonResponse(
+        {"error": "File upload not permitted", "code": "PERMISSION"},
+        status=400,
+    )
+
 
 # NOTE : File upload not yet permitted
 # try:

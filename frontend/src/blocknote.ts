@@ -1,6 +1,7 @@
 import '@blocknote/core/fonts/inter.css';
 import '@blocknote/mantine/style.css';
 import './styles/blocknote.css';
+
 // Import with proper TypeScript paths
 import { scanForWidgets } from './core/dom-scanner';
 import {
@@ -12,6 +13,7 @@ import type {
     EditorConfig,
     UploadConfig,
     RemovalConfig,
+    SlashMenuConfig,
 } from './types';
 
 console.log('Loading BlockNote 0.31.0 with React 19 (HTMX compatible)...');
@@ -25,6 +27,7 @@ interface WidgetData {
     editorConfig: EditorConfig;
     uploadConfig: UploadConfig;
     removalConfig: RemovalConfig;
+    slashMenuConfig: SlashMenuConfig;
     initialContent: unknown;
     readonly: boolean;
 }
@@ -44,6 +47,7 @@ interface DjangoBlockNoteAPI {
         editorConfig: EditorConfig,
         uploadConfig: UploadConfig,
         removalConfig: RemovalConfig,
+        slashMenuConfig: SlashMenuConfig,
         initialContent: unknown,
         readonly: boolean
     ) => void;
@@ -67,15 +71,16 @@ function initWidget(
     editorConfig: EditorConfig,
     uploadConfig: UploadConfig,
     removalConfig: RemovalConfig,
+    slashMenuConfig: SlashMenuConfig,  // Add slash menu config parameter
     initialContent: unknown,
     readonly: boolean
 ): void {
     if (checkReady()) {
         console.log('✅ Initializing BlockNote widget immediately:', editorId);
-        initWidgetWithData(editorId, editorConfig, uploadConfig, removalConfig, initialContent, readonly);
+        initWidgetWithData(editorId, editorConfig, uploadConfig, removalConfig, slashMenuConfig, initialContent, readonly);
     } else {
         console.log('⏳ Queueing BlockNote widget:', editorId);
-        pendingWidgets.push({ editorId, editorConfig, uploadConfig, removalConfig, initialContent, readonly });
+        pendingWidgets.push({ editorId, editorConfig, uploadConfig, removalConfig, slashMenuConfig, initialContent, readonly });
     }
 }
 
@@ -89,6 +94,7 @@ function processPending(): void {
                 widget.editorConfig,
                 widget.uploadConfig,
                 widget.removalConfig,
+                widget.slashMenuConfig,  // Add slash menu config to processing
                 widget.initialContent,
                 widget.readonly,
             );
@@ -154,4 +160,17 @@ document.dispatchEvent(new CustomEvent('blocknote-ready', {
         functions: Object.keys(window.DjangoBlockNote)
     }
 }));
+import React from 'react';
+import ReactDOM from 'react-dom/client';
 
+// Expose React and ReactDOM globally if not already available
+if (typeof window !== 'undefined') {
+    if (!window.React) {
+        (window as any).React = React;
+        console.log('✅ React exposed globally from DjangoBlockNote bundle');
+    }
+    if (!window.ReactDOM) {
+        (window as any).ReactDOM = ReactDOM;
+        console.log('✅ ReactDOM exposed globally from DjangoBlockNote bundle');
+    }
+}

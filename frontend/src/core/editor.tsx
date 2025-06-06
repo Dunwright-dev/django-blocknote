@@ -2,6 +2,7 @@ import React from 'react';
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
 import { findRemovedImages } from '../utils/documents';
+import { CustomSlashMenu } from './slash-menu';
 import {
     useBlockNoteImageUpload,
     useBlockNoteImageRemoval,
@@ -12,7 +13,26 @@ import type {
     ImageUploadConfig,
     RemovalConfig,
     ImageRemovalConfig,
+    SlashMenuConfig,
 } from '../types';
+
+// Debounce hook
+function useDebounce<T extends (...args: any[]) => any>(
+    callback: T,
+    delay: number
+): T {
+    const timeoutRef = React.useRef<NodeJS.Timeout>();
+
+    return React.useCallback(function(...args: Parameters<T>) {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+
+        timeoutRef.current = setTimeout(function() {
+            callback(...args);
+        }, delay);
+    } as T, [callback, delay]);
+}
 
 // Main BlockNote Editor Component
 export function BlockNoteEditor({
@@ -23,51 +43,54 @@ export function BlockNoteEditor({
     readonly = false,
     uploadConfig = {},
     removalConfig = {},
+    slashMenuConfig,
+    debounceDelay = 300, // Add configurable debounce delay
 }: {
     editorId: string;
     initialContent?: any;
     editorConfig?: EditorConfig;
     onChange?: ((content: any) => void) | null;
     readonly?: boolean;
-    uploadConfig?: UploadConfig;  // Union type - future ready
+    uploadConfig?: UploadConfig;
     removalConfig?: RemovalConfig;
+    slashMenuConfig?: SlashMenuConfig;
+    debounceDelay?: number; // New prop for debounce timing
 }) {
     console.log('Creating BlockNote 0.31.0 editor...');
 
     // Use upload hook - cast to ImageUploadConfig since we know it's images for now
     const { uploadFile } = useBlockNoteImageUpload(uploadConfig as ImageUploadConfig);
-
     const { removeImages } = useBlockNoteImageRemoval(removalConfig as ImageRemovalConfig);
 
     // State to track readonly status
     const [isReadonly, setIsReadonly] = React.useState(readonly);
-    //
+
     // Track previous document state
     const [previousDocument, setPreviousDocument] = React.useState(initialContent);
+
+    // Separate state for the most recent content (for immediate UI updates)
+    const [currentContent, setCurrentContent] = React.useState(initialContent);
 
     // Create editor with upload configuration
     const editor = useCreateBlockNote({
         initialContent: initialContent || undefined,
         ...editorConfig,
-        // Use the upload function from our hook, allow override
         uploadFile: editorConfig.uploadFile || uploadFile,
-        ...(editorConfig.isEditable === undefined && { isEditable: !isReadonly })
+        ...(editorConfig.isEditable === undefined && { isEditable: !isReadonly }),
     });
 
     // Effect to watch for data-readonly changes
-    React.useEffect(() => {
+    React.useEffect(function() {
         if (!editorId) return;
         const container = document.querySelector(`[data-editor-id="${editorId}"]`);
         if (!container) return;
 
-        // Set up MutationObserver to watch for attribute changes
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'data-readonly') {
                     const newReadonlyValue = container.getAttribute('data-readonly') === "true";
                     console.log(`Readonly state changed for ${editorId}:`, newReadonlyValue);
                     setIsReadonly(newReadonlyValue);
-                    // Update editor editable state
                     if (editor) {
                         editor.isEditable = !newReadonlyValue;
                     }
@@ -75,60 +98,102 @@ export function BlockNoteEditor({
             });
         });
 
-        // Start observing
         observer.observe(container, {
             attributes: true,
             attributeFilter: ['data-readonly']
         });
 
-        // Cleanup observer on unmount
-        return () => {
+        return function() {
             observer.disconnect();
         };
     }, [editor, editorId]);
 
-    // handleChange with image removal detection
-    const handleChange = React.useCallback(() => {
+    // Debounced function for expensive operations (image cleanup + external onChange)
+    const debouncedProcessChange = useDebounce(function(content: any) {
+        try {
+            // Check for removed images (expensive operation)
+            if (previousDocument) {
+                const removedUrls = findRemovedImages(previousDocument, content);
+                if (removedUrls.length > 0) {
+                    console.log('🗑️ Detected removed images, sending for cleanup:', removedUrls);
+                    removeImages(removedUrls).catch(function(error) {
+                        console.error('❌ Failed to remove images:', error);
+                    });
+                }
+            }
+
+            // Update previous document for next comparison
+            setPreviousDocument(content);
+
+            // Call external onChange (potentially expensive, like API calls)
+            if (onChange) {
+                onChange(content);
+                document.dispatchEvent(new CustomEvent('blocknote-change', {
+                    detail: { content: content, editor }
+                }));
+            }
+        } catch (error) {
+            console.warn('Error during debounced change processing:', error);
+        }
+    }, debounceDelay);
+
+    // Immediate change handler (for UI responsiveness)
+    const handleImmediateChange = React.useCallback(function() {
         const isEditable = editorConfig.isEditable !== undefined ? editorConfig.isEditable : !readonly;
         if (editor && isEditable) {
             try {
-                const currentContent = editor.document;
+                const content = editor.document;
 
-                // Check for removed images
-                if (previousDocument) {
-                    const removedUrls = findRemovedImages(previousDocument, currentContent);
-                    if (removedUrls.length > 0) {
-                        console.log('🗑️ Detected removed images, sending for cleanup:', removedUrls);
-                        removeImages(removedUrls).catch(error => {
-                            console.error('❌ Failed to remove images:', error);
-                            // Don't block the editor change for removal failures
-                        });
-                    }
-                }
+                // Update current content immediately (for UI state)
+                setCurrentContent(content);
 
-                // Update previous document for next comparison
-                setPreviousDocument(currentContent);
+                // Process expensive operations with debounce
+                debouncedProcessChange(content);
 
-                // Existing onChange logic
-                if (onChange) {
-                    onChange(currentContent);
-                    document.dispatchEvent(new CustomEvent('blocknote-change', {
-                        detail: { content: currentContent, editor }
-                    }));
-                }
             } catch (error) {
-                console.warn('Error during editor change handling:', error);
+                console.warn('Error during immediate change handling:', error);
             }
         }
-    }, [onChange, readonly, editor, editorConfig.isEditable, previousDocument, removeImages]);
+    }, [editor, editorConfig.isEditable, readonly, debouncedProcessChange]);
+
+    // Cleanup debounced function on unmount
+    React.useEffect(function() {
+        return function() {
+            // Force final execution of debounced function on unmount
+            if (currentContent && onChange) {
+                try {
+                    onChange(currentContent);
+                } catch (error) {
+                    console.warn('Error during final change execution:', error);
+                }
+            }
+        };
+    }, [currentContent, onChange]);
 
     // Use editorConfig.isEditable if available, otherwise fall back to !readonly
     const isEditable = editorConfig.isEditable !== undefined ? editorConfig.isEditable : !readonly;
 
-    return React.createElement(BlockNoteView, {
+    // Create the base BlockNoteView props
+    const blockNoteViewProps = {
         editor,
         editable: isEditable,
-        onChange: handleChange,
-        theme: editorConfig.theme || 'light'
-    });
+        onChange: handleImmediateChange, // Use the immediate handler
+        theme: editorConfig.theme || 'light',
+        slashMenu: slashMenuConfig?.enabled ? false : true
+    };
+
+    // If custom slash menu is enabled, add it as a child
+    if (slashMenuConfig?.enabled) {
+        return React.createElement(BlockNoteView, blockNoteViewProps,
+            React.createElement(CustomSlashMenu, {
+                editor,
+                config: slashMenuConfig
+            })
+        );
+    }
+
+    // Default return without custom slash menu
+    return React.createElement(BlockNoteView, blockNoteViewProps);
 }
+
+

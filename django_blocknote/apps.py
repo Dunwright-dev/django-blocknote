@@ -36,6 +36,134 @@ class DjangoBlockNoteConfig(AppConfig):
         self._configure_blocknote_settings()
         self._configure_image_removal()
         self._configure_image_upload()
+        self._configure_slash_menu()
+
+    def _configure_slash_menu(self):
+        """
+        Configure multiple slash menu configurations for different user types/contexts.
+
+        This allows you to have different slash menu setups for different use cases,
+        such as 'default' for regular users and 'admin' for administrators.
+        """
+        if not hasattr(settings, "DJ_BN_SLASH_MENU_CONFIGS"):
+            settings.DJ_BN_SLASH_MENU_CONFIGS = {
+                # Global default configuration (fallback)
+                "_default": {
+                    "enabled": True,
+                    "mode": "filtered",
+                    "disabled_items": [
+                        "video",
+                        "audio",
+                        "file",
+                        "code",
+                    ],  # Not implemented
+                    "advanced_options": {
+                        "enable_search": True,
+                        "max_items_shown": 10,
+                        "show_descriptions": True,
+                        "show_icons": True,
+                    },
+                },
+                # Default user configuration - limited feature set
+                "default": {
+                    "enabled": True,
+                    "mode": "filtered",
+                    "disabled_items": [
+                        # Media blocks (except image) Not implemented
+                        "video",
+                        "audio",
+                        "file",
+                        # Advanced features not for general users
+                        "code",  # Code blocks
+                        "equation",  # Math equations
+                        "table",  # Tables (can be complex)
+                        "embed",  # External embeds
+                        "column",  # Layout columns
+                        "pageBreak",  # Page breaks
+                        "template",  # Template blocks
+                        "variable",  # Variable blocks
+                        "form",  # Form blocks
+                        "button",  # Interactive buttons
+                    ],
+                    "advanced_options": {
+                        "enable_search": True,
+                        "max_items_shown": 8,  # Fewer items to avoid overwhelming
+                        "show_descriptions": True,  # Help users understand options
+                        "show_icons": True,
+                        "show_keyboard_shortcuts": True,
+                    },
+                },
+                # Admin configuration - full access to all features
+                "admin": {
+                    "enabled": True,
+                    "mode": "filtered",
+                    "disabled_items": [
+                        # Only disable truly problematic items for admins
+                        # Maybe keep some media if upload handling is robust
+                        "video",  # Disabled video handling isn't implemented
+                        "audio",  # Disabled audio handling isn't implemented
+                        # Admins get access to everything else including:
+                        "file",  # Disabled file handling isn't implemented
+                        # - code blocks (they might need them)
+                        # - tables (they can handle the complexity)
+                        # - advanced layout options
+                        # - forms and interactive elements
+                    ],
+                    "advanced_options": {
+                        "enable_search": True,
+                        "max_items_shown": 15,  # More items for power users
+                        "show_descriptions": True,
+                        "show_icons": True,
+                        "show_keyboard_shortcuts": True,  # Power users want shortcuts
+                        "group_items": True,  # Better organization for many items
+                        "show_group_headers": True,
+                    },
+                },
+                # Examples: Additional configurations for specific contexts
+                "blog": {
+                    "enabled": True,
+                    "mode": "filtered",
+                    "disabled_items": [
+                        "video",
+                        "audio",
+                        "file",
+                        "code",
+                        "equation",
+                        "table",
+                        "form",
+                        "button",
+                        "variable",
+                        "template",
+                    ],
+                    "advanced_options": {
+                        "enable_search": True,
+                        "max_items_shown": 10,
+                        "show_descriptions": True,
+                        "show_icons": True,
+                    },
+                },
+                "documentation": {
+                    "enabled": True,
+                    "mode": "filtered",
+                    "disabled_items": [
+                        "video",
+                        "audio",
+                        "file",
+                        "embed",
+                        "form",
+                        "button",
+                        "variable",
+                        "template",
+                    ],
+                    "advanced_options": {
+                        "enable_search": True,
+                        "max_items_shown": 12,
+                        "show_descriptions": True,
+                        "show_icons": True,
+                        "show_keyboard_shortcuts": True,
+                    },
+                },
+            }
 
     def _configure_image_removal(self):
         # If saving images rather than delete, this is the bulk update size

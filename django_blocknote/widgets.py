@@ -20,19 +20,22 @@ class BlockNoteWidget(forms.Textarea):
         editor_config=None,
         image_upload_config=None,
         image_removal_config=None,
+        menu_type="default",
         attrs=None,
     ):
         self.editor_config = editor_config or {}
         self.image_upload_config = image_upload_config or {}
         self.image_removal_config = image_removal_config or {}
+        self.menu_type = menu_type
 
         logger.debug(
             event="widget_init",
-            msg="Show values from field",
+            msg="BlockNote widget initialized",
             data={
                 "image_upload_config": self.image_upload_config,
                 "image_removal_config": self.image_removal_config,
                 "editor_config": self.editor_config,
+                "menu_type": self.menu_type,  # Log the menu type being used
             },
         )
 
@@ -118,6 +121,38 @@ class BlockNoteWidget(forms.Textarea):
 
         return image_upload_config
 
+    def get_slash_menu_config(self):
+        """
+        Get slash menu configuration based on menu_type from global settings.
+        No need for widget-specific config anymore - everything is in settings.
+        """
+        # Get all configurations from settings
+        all_configs = getattr(settings, "DJ_BN_SLASH_MENU_CONFIGS", {})
+
+        # Get the specific config for this menu type
+        if self.menu_type in all_configs:
+            config = all_configs[self.menu_type].copy()
+            msg = f"Found menu configuration for type: {self.menu_type}"
+            logger.debug(
+                event="get_slash_menu_config",
+                msg=msg,
+                data={"menu_type": self.menu_type, "config": config},
+            )
+        else:
+            # Fallback to _default if menu_type not found
+            config = all_configs.get("_default", {}).copy()
+            msg = f"Menu type '{self.menu_type}' not found, using _default"
+            logger.warning(
+                event="get_slash_menu_config",
+                msg=msg,
+                data={
+                    "requested_type": self.menu_type,
+                    "available_types": list(all_configs.keys()),
+                },
+            )
+
+        return config
+
     def format_value(self, value):
         """'\
         Ensure we always return a valid BlockNote document structure.
@@ -143,6 +178,8 @@ class BlockNoteWidget(forms.Textarea):
         image_upload_config = self.get_image_upload_config()
         image_removal_config = self.get_image_removal_config()
         initial_content = self.format_value(value)
+        slash_menu_config = self.get_slash_menu_config()
+
         try:
             image_removal_config_json = json.dumps(
                 image_removal_config,
@@ -179,6 +216,15 @@ class BlockNoteWidget(forms.Textarea):
         except (TypeError, ValueError):
             initial_content_json = "[]"
 
+        try:
+            slash_menu_config_json = json.dumps(
+                slash_menu_config,
+                cls=DjangoJSONEncoder,
+                ensure_ascii=False,
+            )
+        except (TypeError, ValueError):
+            slash_menu_config_json = "{}"
+
         # TODO: Simplify, check for potential duplicates
         # Add data to context for template
         context["widget"]["editor_config"] = editor_config
@@ -187,6 +233,8 @@ class BlockNoteWidget(forms.Textarea):
         context["widget"]["image_upload_config_json"] = image_upload_config_json
         context["widget"]["image_removal_config"] = image_removal_config
         context["widget"]["image_removal_config_json"] = image_removal_config_json
+        context["widget"]["slash_menu_config"] = slash_menu_config
+        context["widget"]["slash_menu_config_json"] = slash_menu_config_json
         context["widget"]["initial_content"] = initial_content
         context["widget"]["initial_content_json"] = initial_content_json
         context["widget"]["editor_id"] = widget_id
@@ -201,6 +249,7 @@ class BlockNoteWidget(forms.Textarea):
             print(f"  Config: {editor_config_json}")  # noqa: T201
             print(f"  Upload Config: {image_upload_config_json}")  # noqa: T201
             print(f"  Removal Config: {image_removal_config_json}")  # noqa: T201
+            print(f"  Slash Menu Config: {slash_menu_config_json}")  # noqa: T201
             print(f"  Content: {initial_content_json[:100]}...")  # noqa: T201
             print(f"  JS URL: {context['widget']['js_url']}")  # noqa: T201
             print(f"  CSS URL: {context['widget']['css_url']}")  # noqa: T201
