@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.06.06.4]
+
+### Bug Fixes
+- Increase url max_length (url) [#19](https://github.com/Dunwright-dev/django-blocknote/pull/19)
+
+
 ## [2025.06.06.3]
 
 ### Maintenance

@@ -25,7 +25,7 @@ class UnusedImageURLS(models.Model):
         ),
     )
     image_url = models.URLField(
-        max_length=255,
+        max_length=500,
         blank=True,
         default="",
         verbose_name=_(
