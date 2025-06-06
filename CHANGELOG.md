@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## [2025.06.06.2]
+
+### Maintenance
+- Add configurable slash menu (menu) [#14](https://github.com/Dunwright-dev/django-blocknote/pull/14)
+- Expose react globally, update example setup (conf) [#14](https://github.com/Dunwright-dev/django-blocknote/pull/14)
+
+
 ## [2025.06.06.1]
 
 ### Maintenance

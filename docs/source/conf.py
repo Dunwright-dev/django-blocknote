@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
-__version__ = "2025.06.06.1"
+__version__ = "2025.06.06.2"
 
 project = "django-blocknote"
 copyright = "2025, Ryan Sevelj & Mark Sevelj"
