@@ -35,3 +35,7 @@ export type {
     DjangoRemovalResponse,
 
 } from './django';
+
+export type {
+    SlashMenuConfig,
+} from './slash-menu';

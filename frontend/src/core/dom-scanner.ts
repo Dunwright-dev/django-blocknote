@@ -1,5 +1,5 @@
 // core/dom-scanner.ts
-import type { EditorConfig, UploadConfig, RemovalConfig } from '../types';
+import type { EditorConfig, UploadConfig, RemovalConfig, SlashMenuConfig } from '../types';
 
 export function scanForWidgets(
     rootElement: Document | Element = document,
@@ -8,6 +8,7 @@ export function scanForWidgets(
         editorConfig: EditorConfig,
         uploadConfig: UploadConfig,
         removalConfig: RemovalConfig,
+        slashMenuConfig: SlashMenuConfig,
         initialContent: unknown,
         readonly: boolean
     ) => void
@@ -87,6 +88,27 @@ export function scanForWidgets(
             return; // Don't initialize broken widget
         }
 
+        // Get SLASH MENU configuration from script tag with ID "_slash_menu_config"
+        let slashMenuConfig = {};
+        const slashMenuConfigScript = document.getElementById(`${editorId}_slash_menu_config`);
+        console.log(`🔍 Looking for slash menu config script: ${editorId}_slash_menu_config`);
+        console.log(`📜 Slash menu config script element:`, slashMenuConfigScript);
+
+        if (slashMenuConfigScript) {
+            try {
+                slashMenuConfig = JSON.parse(slashMenuConfigScript.textContent || '{}');
+                console.log(`⚡ Slash menu config loaded for ${editorId}:`, slashMenuConfig);
+            } catch (e) {
+                console.warn(`⚠️ Invalid slash menu config for ${editorId}:`, e);
+            }
+        } else {
+            console.warn(`⚠️ No slash menu config script found for ${editorId}_slash_menu_config - using defaults`);
+            // Set default config if script is missing
+            slashMenuConfig = {
+                enabled: false  // Default to disabled if no config found
+            };
+        }
+
         // Get content from script tag with ID "_content"
         let content = [];
         const contentScript = document.getElementById(`${editorId}_content`);
@@ -114,7 +136,17 @@ export function scanForWidgets(
 
         // Initialize with all configs
         console.log(`✅ Initializing BlockNote ${isReadonly ? 'viewer' : 'widget'}: ${editorId}`);
-        initWidgetCallback(editorId, editorConfig, uploadConfig, removalConfig, content, isReadonly);
+        console.log(`   🎯 Slash menu ${slashMenuConfig.enabled ? 'ENABLED' : 'DISABLED'} for ${editorId}`);
+
+        initWidgetCallback(
+            editorId,
+            editorConfig,
+            uploadConfig,
+            removalConfig,
+            slashMenuConfig,  // Pass slash menu config
+            content,
+            isReadonly
+        );
     });
 
     console.log('✅ Widget scanning complete');

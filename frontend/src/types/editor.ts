@@ -1,3 +1,4 @@
+import { SlashMenuConfig } from '../types';
 /**
  * Configuration for BlockNote editor behavior and appearance
  */
@@ -28,4 +29,5 @@ export interface EditorConfig {
     fontSize?: number;
     /** Line height */
     lineHeight?: number;
+    slashMenuConfig?: SlashMenuConfig;
 }

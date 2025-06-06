@@ -1,12 +1,13 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BlockNoteEditor } from './editor';
-
 import type {
     EditorConfig,
     UploadConfig,
     RemovalConfig,
+    SlashMenuConfig,
 } from '../types';
+
 // Enhanced widget initialization with cleanup tracking
 export const blockNoteRoots = new Map(); // Track React roots for cleanup
 
@@ -15,10 +16,13 @@ export function initWidgetWithData(
     editorConfig: EditorConfig,
     uploadConfig: UploadConfig,
     removalConfig: RemovalConfig,
+    slashMenuConfig: SlashMenuConfig,
     initialContent: unknown = null,
     readonly: boolean = false
 ): void {
     console.log('Initializing BlockNote widget:', editorId);
+    console.log('🎯 Slash menu config for', editorId, ':', slashMenuConfig);  // Debug log
+
     const container = document.getElementById(editorId + '_editor');
     const textarea = document.getElementById(editorId);
 
@@ -105,9 +109,10 @@ export function initWidgetWithData(
         const element = React.createElement(BlockNoteEditor, {
             editorId: editorId,
             initialContent: processedContent,
-            editorConfig: editorConfig,  // ← Fixed: was config
-            uploadConfig: uploadConfig,  // ← Use parameter, not local variable
+            editorConfig: editorConfig,
+            uploadConfig: uploadConfig,
             removalConfig: removalConfig,
+            slashMenuConfig: slashMenuConfig,  // Add slash menu config to props
             onChange: handleChange,
             readonly: readonly,
         });
@@ -115,11 +120,14 @@ export function initWidgetWithData(
         const root = createRoot(container);
         root.render(element);
         blockNoteRoots.set(editorId, root);
+
         console.log('✅ BlockNote widget rendered successfully:', editorId);
+        console.log(`   ⚡ Custom slash menu: ${slashMenuConfig?.enabled ? 'ENABLED' : 'DISABLED'}`);
 
     } catch (error) {
         console.error('Critical widget initialization error:', error);
         textareaElement.value = '[]';
+
         container.innerHTML = `
             <div style="border: 2px solid #ef4444; padding: 16px; border-radius: 8px; background: #fef2f2;">
                 <div style="font-weight: 600; margin-bottom: 8px; color: #dc2626;">
