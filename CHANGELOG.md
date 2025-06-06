@@ -2,6 +2,15 @@
 
 <!--next-version-placeholder-->
 
+## [2025.06.06.1]
+
+### Maintenance
+- Add front-end machinery for image removal handling (image) [#12](https://github.com/Dunwright-dev/django-blocknote/pull/12)
+- Add image deletion machinery (img) [#12](https://github.com/Dunwright-dev/django-blocknote/pull/12)
+- Improve dev experience with builds and setup (dev) [#12](https://github.com/Dunwright-dev/django-blocknote/pull/12)
+- Update setup and test coverage (dev) [#12](https://github.com/Dunwright-dev/django-blocknote/pull/12)
+
+
 ## [2025.06.04.1]
 
 ### Maintenance
