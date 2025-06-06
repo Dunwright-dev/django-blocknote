@@ -105,6 +105,9 @@ SECRET_KEY = 'django-insecure-demo-key-for-development-only'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# The batch size for image deletion from the database
+DJ_BN_BULK_DELETE_BATCH_SIZE=2
+
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # Application definition
@@ -564,7 +567,7 @@ from django_blocknote.models import UnusedImageURLS
 
 @admin.register(UnusedImageURLS)
 class UnusedImageURLSAdmin(admin.ModelAdmin):
-    list_display = ['user','image_url', 'created', 'deleted', 'processing', 'deletion_error', 'retry_count']
+    list_display = ['user','image_url', 'created', 'deleted', 'processing_stats', 'processing', 'deletion_error', 'retry_count']
     search_fields = ['user','image_url']
     list_filter = ['user','created', 'deleted', 'processing']
 

@@ -13,10 +13,51 @@ class DjangoBlockNoteConfig(AppConfig):
 
     def ready(self):
         """Configure BlockNote settings with intelligent defaults."""
+        if not hasattr(settings, "DJ_BN_VIEWER_CONFIG"):
+            # Minimal config
+            settings.DJ_BN_VIEWER_CONFIG = {
+                "theme": "light",  # or "dark"
+                "animations": True,
+                "showImageCaptions": True,
+                "allowImageZoom": True,
+            }
+
+            # NOTE: Future use
+
+        # Allowed document types (for file uploads)
+        # if not hasattr(settings, "DJ_BN_ALLOWED_DOCUMENT_TYPES"):
+        #     settings.DJ_BN_ALLOWED_DOCUMENT_TYPES = [
+        #         "application/pdf",
+        #         "application/msword",
+        #         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        #         "text/plain",
+        #     ]
+
+        self._configure_blocknote_settings()
+        self._configure_image_removal()
+        self._configure_image_upload()
+
+    def _configure_image_removal(self):
+        # If saving images rather than delete, this is the bulk update size
         if not hasattr(settings, "DJ_BN_BULK_CREATE_BATCH_SIZE"):
             settings.DJ_BN_BULK_CREATE_BATCH_SIZE: int = 50  # type: ignore[attr-defined]
+
+        # If True, images are deleted, otherwise the url is saved to a model for later processing
         if not hasattr(settings, "DJ_BN_IMAGE_DELETION"):
             settings.DJ_BN_IMAGE_DELETION: bool = True  # type: ignore[attr-defined]
+
+        # Config required for image deletion handling, passed through the frontend.
+        if not hasattr(settings, "DJ_BN_IMAGE_REMOVAL_CONFIG"):
+            settings.DJ_BN_IMAGE_REMOVAL_CONFIG = {
+                # Core Upload Settings
+                "removalURL": "/django-blocknote/remove-image/",
+            }
+
+        # The number that will trigger the image deletion form DB
+        if not hasattr(settings, "DJ_BN_BULK_DELETE_BATCH_SIZE"):
+            settings.DJ_BN_BULK_DELETE_BATCH_SIZE = 20
+
+    def _configure_image_upload(self):
         if not hasattr(
             settings,
             "DJ_BN_PERMITTED_IMAGE_TYPES",
@@ -30,6 +71,7 @@ class DjangoBlockNoteConfig(AppConfig):
                 "webp",
                 "tiff",
             ]
+
         if not hasattr(settings, "DJ_BN_IMAGE_FORMATTER"):
             settings.DJ_BN_IMAGE_FORMATTER = (
                 "django_blocknote.image.convert_image_to_webp"
@@ -49,18 +91,12 @@ class DjangoBlockNoteConfig(AppConfig):
         if not hasattr(settings, "DJ_BN_MAX_FILE_SIZE"):
             settings.DJ_BN_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
+        # TODO: Probably delete and use uploadUrl
         if not hasattr(settings, "DJ_BN_UPLOAD_PATH"):
             settings.DJ_BN_UPLOAD_PATH = (
                 "blocknote_uploads"  # Directory within MEDIA_ROOT
             )
-        if not hasattr(settings, "DJ_BN_VIEWER_CONFIG"):
-            settings.DJ_BN_VIEWER_CONFIG = {
-                "theme": "light",  # or "dark"
-                "animations": True,
-                "showImageCaptions": True,
-                "allowImageZoom": True,
-            }
-
+        # Used by the frontend
         if not hasattr(settings, "DJ_BN_IMAGE_UPLOAD_CONFIG"):
             settings.DJ_BN_IMAGE_UPLOAD_CONFIG = {
                 # Core Upload Settings
@@ -108,26 +144,6 @@ class DjangoBlockNoteConfig(AppConfig):
                 # "customHeaders": {},  # Additional HTTP headers  # noqa: ERA001
                 # "transformResponse": None,  # Custom response transformation  # noqa: E501, ERA001
             }
-        # NOTE: Future use
-
-        # if not hasattr(settings, "DJ_BN_ALLOWED_FILE_TYPES"):
-        #     settings.DJ_BN_ALLOWED_FILE_TYPES = [
-        #         "image/jpeg",
-        #         "image/png",
-        #         "image/gif",
-        #         "image/webp",
-        #     ]
-
-        # Allowed document types (for file uploads)
-        # if not hasattr(settings, "DJ_BN_ALLOWED_DOCUMENT_TYPES"):
-        #     settings.DJ_BN_ALLOWED_DOCUMENT_TYPES = [
-        #         "application/pdf",
-        #         "application/msword",
-        #         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        #         "text/plain",
-        #     ]
-
-        self._configure_blocknote_settings()
 
     # TODO: Update with DJ_BN and tie in with ones above
     def _configure_blocknote_settings(self):

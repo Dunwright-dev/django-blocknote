@@ -19,16 +19,19 @@ class BlockNoteWidget(forms.Textarea):
         self,
         editor_config=None,
         image_upload_config=None,
+        image_removal_config=None,
         attrs=None,
     ):
         self.editor_config = editor_config or {}
         self.image_upload_config = image_upload_config or {}
+        self.image_removal_config = image_removal_config or {}
 
         logger.debug(
             event="widget_init",
             msg="Show values from field",
             data={
                 "image_upload_config": self.image_upload_config,
+                "image_removal_config": self.image_removal_config,
                 "editor_config": self.editor_config,
             },
         )
@@ -37,6 +40,41 @@ class BlockNoteWidget(forms.Textarea):
         if attrs:
             default_attrs.update(attrs)
         super().__init__(default_attrs)
+
+    def get_image_removal_config(self):
+        """
+        Get removal configuration with sensible defaults.
+        """
+        image_removal_config = self.image_removal_config.copy()
+
+        # Set default removal URL if not provided
+        if "removalUrl" not in image_removal_config:
+            try:
+                image_removal_config["removalUrl"] = reverse(
+                    "django_blocknote:remove_image",
+                )
+            except NoReverseMatch:
+                # Fallback if URL pattern not configured
+                image_removal_config["removalUrl"] = "/django-blocknote/remove-image/"
+
+        # Set other defaults only if not already provided
+        if "retryAttempts" not in image_removal_config:
+            image_removal_config["retryAttempts"] = 3
+        if "retryDelay" not in image_removal_config:
+            image_removal_config["retryDelay"] = 1000
+        if "timeout" not in image_removal_config:
+            image_removal_config["timeout"] = 30000
+        if "maxConcurrent" not in image_removal_config:
+            image_removal_config["maxConcurrent"] = 1
+
+        logger.debug(
+            event="get_image_removal_config",
+            msg="Show removal config values",
+            data={
+                "image_removal_config": image_removal_config,
+            },
+        )
+        return image_removal_config
 
     # TODO: This needs to align with the settings
     def get_image_upload_config(self):
@@ -103,9 +141,17 @@ class BlockNoteWidget(forms.Textarea):
         # Ensure we have valid data structures
         editor_config = self.editor_config.copy() if self.editor_config else {}
         image_upload_config = self.get_image_upload_config()
+        image_removal_config = self.get_image_removal_config()
         initial_content = self.format_value(value)
-
-        # Serialize data for JavaScript consumption with proper escaping
+        try:
+            image_removal_config_json = json.dumps(
+                image_removal_config,
+                cls=DjangoJSONEncoder,
+                ensure_ascii=False,
+            )
+        except (TypeError, ValueError):
+            image_removal_config_json = "{}"
+            # Serialize data for JavaScript consumption with proper escaping
         try:
             editor_config_json = json.dumps(
                 editor_config,
@@ -139,6 +185,8 @@ class BlockNoteWidget(forms.Textarea):
         context["widget"]["editor_config_json"] = editor_config_json
         context["widget"]["image_upload_config"] = image_upload_config
         context["widget"]["image_upload_config_json"] = image_upload_config_json
+        context["widget"]["image_removal_config"] = image_removal_config
+        context["widget"]["image_removal_config_json"] = image_removal_config_json
         context["widget"]["initial_content"] = initial_content
         context["widget"]["initial_content_json"] = initial_content_json
         context["widget"]["editor_id"] = widget_id
@@ -152,6 +200,7 @@ class BlockNoteWidget(forms.Textarea):
             print(f"BlockNote Widget Context: id={widget_id}")  # noqa: T201
             print(f"  Config: {editor_config_json}")  # noqa: T201
             print(f"  Upload Config: {image_upload_config_json}")  # noqa: T201
+            print(f"  Removal Config: {image_removal_config_json}")  # noqa: T201
             print(f"  Content: {initial_content_json[:100]}...")  # noqa: T201
             print(f"  JS URL: {context['widget']['js_url']}")  # noqa: T201
             print(f"  CSS URL: {context['widget']['css_url']}")  # noqa: T201

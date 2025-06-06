@@ -15,12 +15,14 @@ class BlockNoteField(models.JSONField):
         self,
         editor_config: dict[str, Any] | None = None,
         image_upload_config: dict[str, Any] | None = None,
+        image_removal_config: dict[str, Any] | None = None,
         *args,
         **kwargs,
     ):
         # Use None as default and create new dict to avoid mutable default
         self.editor_config = editor_config or {}
         self.image_upload_config = image_upload_config or {}
+        self.image_removal_config = image_removal_config or {}
 
         # TODO: Update names and check still required.
         blocknote_settings = getattr(settings, "DJANGO_BLOCKNOTE", {})
@@ -37,6 +39,7 @@ class BlockNoteField(models.JSONField):
         kwargs["widget"] = BlockNoteWidget(
             editor_config=self.editor_config,
             image_upload_config=self.image_upload_config,
+            image_removal_config=self.image_removal_config,
         )
         return super().formfield(**kwargs)
 
