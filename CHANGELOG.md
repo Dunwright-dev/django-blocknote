@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.06.07.3]
+
+### Bug Fixes
+- Typo in widget breaking config (editor) [#24](https://github.com/Dunwright-dev/django-blocknote/pull/24)
+
+
 ## [2025.06.07.2]
 
 ### Maintenance
