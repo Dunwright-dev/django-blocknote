@@ -45,6 +45,7 @@ class DjangoBlockNoteConfig(AppConfig):
         This allows you to have different slash menu setups for different use cases,
         such as 'default' for regular users and 'admin' for administrators.
         """
+        # TODO: _default and default need some thought
         if not hasattr(settings, "DJ_BN_SLASH_MENU_CONFIGS"):
             settings.DJ_BN_SLASH_MENU_CONFIGS = {
                 # Global default configuration (fallback)
@@ -52,11 +53,22 @@ class DjangoBlockNoteConfig(AppConfig):
                     "enabled": True,
                     "mode": "filtered",
                     "disabled_items": [
+                        # Media blocks (except image) Not implemented
                         "video",
                         "audio",
                         "file",
-                        "code",
-                    ],  # Not implemented
+                        # Advanced features not for general users
+                        "code",  # Code blocks
+                        "equation",  # Math equations
+                        "table",  # Tables (can be complex)
+                        "embed",  # External embeds
+                        "column",  # Layout columns
+                        "pageBreak",  # Page breaks
+                        "template",  # Template blocks
+                        "variable",  # Variable blocks
+                        "form",  # Form blocks
+                        "button",  # Interactive buttons
+                    ],
                     "advanced_options": {
                         "enable_search": True,
                         "max_items_shown": 10,
@@ -178,7 +190,7 @@ class DjangoBlockNoteConfig(AppConfig):
         if not hasattr(settings, "DJ_BN_IMAGE_REMOVAL_CONFIG"):
             settings.DJ_BN_IMAGE_REMOVAL_CONFIG = {
                 # Core Upload Settings
-                "removalURL": "/django-blocknote/remove-image/",
+                "removalUrl": "/django-blocknote/remove-image/",
             }
 
         # The number that will trigger the image deletion form DB

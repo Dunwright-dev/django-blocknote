@@ -198,9 +198,9 @@ class BlockNoteWidget(forms.Textarea):
         # Apply widget-specific overrides (highest priority)
         base_config.update(self.image_removal_config)
         # Only try URL resolution if no explicit URL was provided
-        if "removalURL" not in base_config:
+        if "removalUrl" not in base_config:
             try:
-                base_config["removalURL"] = reverse("django_blocknote:remove_image")
+                base_config["removalUrl"] = reverse("django_blocknote:remove_image")
             except NoReverseMatch:
                 logger.exception(
                     event="url_resolution_failed",
@@ -274,4 +274,3 @@ class BlockNoteReadOnlyWidget(forms.Widget):
         context = super().get_context(name, value, attrs)
         context["widget"]["content"] = self.format_value(value)
         return context
-
