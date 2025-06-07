@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.06.07.2]
+
+### Maintenance
+- Add media and read only for admin (widget) [#22](https://github.com/Dunwright-dev/django-blocknote/pull/22)
+
+
 ## [2025.06.07.1]
 
 ### Code Refactoring
