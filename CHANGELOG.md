@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.06.07.1]
+
+### Code Refactoring
+- Config falls back to settings (widget) [#17](https://github.com/Dunwright-dev/django-blocknote/pull/17)
+
+
 ## [2025.06.06.4]
 
 ### Bug Fixes
