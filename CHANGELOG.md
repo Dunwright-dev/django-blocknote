@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.06.08.1]
+
+### Maintenance
+- Consolidate templates and css into single files (widget) [#26](https://github.com/Dunwright-dev/django-blocknote/pull/26)
+
+
 ## [2025.06.07.3]
 
 ### Bug Fixes
