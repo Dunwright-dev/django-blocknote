@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.06.08.2]
+
+### Maintenance
+- Simplify template and css layouts (ui) [#28](https://github.com/Dunwright-dev/django-blocknote/pull/28)
+
+
 ## [2025.06.08.1]
 
 ### Maintenance
