@@ -13,11 +13,9 @@ from django_blocknote.assets import get_vite_asset
 class BlockNoteWidget(forms.Textarea):
     """
     A rich text widget for BlockNote editor integration.
-
     Usage:
         class MyForm(forms.Form):
             content = forms.CharField(widget=BlockNoteWidget())
-
         # Or with custom config:
         content = forms.CharField(
             widget=BlockNoteWidget(
@@ -27,7 +25,7 @@ class BlockNoteWidget(forms.Textarea):
         )
     """
 
-    template_name = "django_blocknote/widgets/blocknote.html"
+    template_name = "django_blocknote/blocknote.html"
 
     def __init__(
         self,
@@ -36,6 +34,7 @@ class BlockNoteWidget(forms.Textarea):
         image_upload_config=None,
         image_removal_config=None,
         menu_type="default",
+        mode="edit",
     ):
         # Set default CSS class
         default_attrs = {"class": "django-blocknote-editor"}
@@ -48,6 +47,7 @@ class BlockNoteWidget(forms.Textarea):
         self.image_upload_config = image_upload_config or {}
         self.image_removal_config = image_removal_config or {}
         self.menu_type = menu_type
+        self.mode = mode
 
     @property
     def media(self):
@@ -60,7 +60,6 @@ class BlockNoteWidget(forms.Textarea):
     def format_value(self, value):
         """
         Convert the field value to the format expected by the widget template.
-
         BlockNote expects a list of block objects. Handle various input formats:
         - None/empty -> empty list
         - JSON string -> parsed list
@@ -68,17 +67,14 @@ class BlockNoteWidget(forms.Textarea):
         """
         if value is None or value == "":
             return []
-
         if isinstance(value, str):
             try:
                 parsed = json.loads(value)
                 return parsed if isinstance(parsed, list) else []
             except (json.JSONDecodeError, TypeError):
                 return []
-
         if isinstance(value, list):
             return value
-
         return []
 
     def value_from_datadict(self, data, files, name):
@@ -131,6 +127,11 @@ class BlockNoteWidget(forms.Textarea):
             },
         )
 
+        # Add unified context variables for template
+        context["mode"] = self.mode
+        context["editor_id"] = widget_id
+        context["has_content"] = bool(self.format_value(value))
+
         # Debug output in development
         if getattr(settings, "DEBUG", False):
             print(f"\n{'=' * 50}")  # noqa: T201
@@ -159,13 +160,14 @@ class BlockNoteWidget(forms.Textarea):
         2. Settings config - fallback
         3. Django URL resolution - only if no explicit URL provided
         """
-
         logger = structlog.get_logger(__name__)
 
         # Start with global settings
         base_config = getattr(settings, "DJ_BN_IMAGE_UPLOAD_CONFIG", {}).copy()
+
         # Apply widget-specific overrides (highest priority)
         base_config.update(self.image_upload_config)
+
         # Only try URL resolution if no explicit URL was provided
         if "uploadUrl" not in base_config:
             try:
@@ -176,11 +178,13 @@ class BlockNoteWidget(forms.Textarea):
                     msg="No upload URL configured and django_blocknote URLs not included",
                     data={"url_name": "django_blocknote:upload_image"},
                 )
+
         logger.debug(
             event="get_image_upload_config",
             msg="Using upload config with widget overrides",
             data={"config": base_config},
         )
+
         return base_config
 
     def _get_image_removal_config(self):
@@ -190,13 +194,14 @@ class BlockNoteWidget(forms.Textarea):
         2. Settings config - fallback
         3. Django URL resolution - only if no explicit URL provided
         """
-
         logger = structlog.get_logger(__name__)
 
         # Start with global settings
         base_config = getattr(settings, "DJ_BN_IMAGE_REMOVAL_CONFIG", {}).copy()
+
         # Apply widget-specific overrides (highest priority)
         base_config.update(self.image_removal_config)
+
         # Only try URL resolution if no explicit URL was provided
         if "removalUrl" not in base_config:
             try:
@@ -207,11 +212,13 @@ class BlockNoteWidget(forms.Textarea):
                     msg="No removal URL configured and django_blocknote URLs not included",  # noqa: E501
                     data={"url_name": "django_blocknote:remove_image"},
                 )
+
         logger.debug(
             event="get_image_removal_config",
             msg="Using removal config with widget overrides",
             data={"config": base_config},
         )
+
         return base_config
 
     def _get_slash_menu_config(self):
@@ -219,11 +226,11 @@ class BlockNoteWidget(forms.Textarea):
         Get slash menu configuration based on menu_type from global settings.
         Widget-specific config acts as override only.
         """
-
         logger = structlog.get_logger(__name__)
 
         # Get all configurations from settings
         all_configs = getattr(settings, "DJ_BN_SLASH_MENU_CONFIGS", {})
+
         # Get the specific config for this menu type
         if self.menu_type in all_configs:
             config = all_configs[self.menu_type].copy()
@@ -245,32 +252,6 @@ class BlockNoteWidget(forms.Textarea):
                     "available_types": list(all_configs.keys()),
                 },
             )
+
         return config
 
-
-class BlockNoteReadOnlyWidget(forms.Widget):
-    """
-    A read-only widget that renders BlockNote content without editing capabilities.
-    Useful for admin readonly_fields or display-only contexts.
-    """
-
-    template_name = "django_blocknote/widgets/blocknote_readonly.html"
-
-    def format_value(self, value):
-        """Format value for read-only display."""
-        if value is None or value == "":
-            return []
-
-        if isinstance(value, str):
-            try:
-                parsed = json.loads(value)
-                return parsed if isinstance(parsed, list) else []
-            except (json.JSONDecodeError, TypeError):
-                return []
-
-        return value if isinstance(value, list) else []
-
-    def get_context(self, name, value, attrs):
-        context = super().get_context(name, value, attrs)
-        context["widget"]["content"] = self.format_value(value)
-        return context

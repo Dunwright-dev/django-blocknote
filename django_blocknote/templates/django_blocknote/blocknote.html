@@ -1,0 +1,75 @@
+<!-- django_blocknote/templates/django_blocknote/unified/blocknote.html -->
+{% comment %}
+Unified BlockNote template supporting both edit and readonly modes.
+Context variables:
+- mode: 'edit' or 'readonly' 
+- All existing widget/template_tag context variables
+{% endcomment %}
+{% if mode == 'readonly' and not has_content %}
+    <!-- Empty state for readonly mode -->
+    <div class="{{ widget.attrs.class|default:'blocknote-viewer' }} blocknote-empty-state"
+         style="text-align: center;
+                color: #9ca3af;
+                font-style: italic;
+                padding: 40px 20px;
+                background: #f9fafb;
+                border: 1px dashed #d1d5db;
+                border-radius: 8px">
+        <div style="font-size: 2em; margin-bottom: 10px;">📝</div>
+        <div>No content to display</div>
+    </div>
+{% else %}
+    <!-- Main editor container -->
+    <div class="django-blocknote-wrapper {{ widget.attrs.class|default:'' }} {% if mode == 'readonly' %}blocknote-readonly{% else %}blocknote-editable{% endif %}"
+         {% if mode == 'readonly' %}id="django-blocknote-wrapper"{% endif %}>
+        <!-- Hidden textarea (required by both modes) -->
+        <textarea name="{{ widget.name|default:'blocknote_content' }}"
+                  id="{{ editor_id }}"
+                  class="{{ widget.attrs.class|default:'' }}"
+                  style="display: none"
+                  {% if widget.attrs.required and mode != 'readonly' %}required{% endif %}
+                  {% if mode == 'readonly' %}data-readonly="true"{% endif %}>{{ widget.value|default:''|safe }}</textarea>
+        <!-- Editor container -->
+        <div id="{{ editor_id }}_editor"
+             data-editor-id="{{ editor_id }}"
+             data-readonly="{% if mode == 'readonly' %}true{% else %}false{% endif %}"
+             {% if mode == 'readonly' %}data-blocknote-config="{}" data-blocknote-content="{{ widget.value|escape }}"{% endif %}
+             style="{% if mode == 'readonly' %} border: 1px solid #e5e7eb;
+                    border-radius: 8px;
+                    padding: 16px;
+                    background: #ffffff;
+                    min-height: 100px;
+                    {% else %} e                       min-height: 200px;
+                    border: 1px solid #ddd;
+                    padding: 10px;
+                    {% endif %}">
+            <!-- Loading placeholder -->
+            <div class="blocknote-loading"
+                 style="display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        {% if mode == 'readonly' %}min-height: 60px;
+                        {% else %}height: 180px;
+                        {% endif %} color: #666;
+                        font-style: italic">
+                <div style="text-align: center;">
+                    {% if mode == 'readonly' %}
+                        <div style="margin-bottom: 8px; font-size: 14px;">📖 Loading content...</div>
+                        <div style="font-size: 12px; color: #6b7280;">Rendering rich text content</div>
+                    {% else %}
+                        <div style="margin-bottom: 8px;">📝 Loading rich text editor...</div>
+                        <div style="font-size: 12px;">
+                            If this persists, ensure {% templatetag openblock %} blocknote_full {% templatetag closeblock %} is included in your template.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+<!-- Configuration scripts -->
+<script type="application/json" id="{{ editor_id }}_content">{{ widget.initial_content|safe }}</script>
+<script type="application/json" id="{{ editor_id }}_editor_config">{{ widget.editor_config|safe }}</script>
+<script type="application/json" id="{{ editor_id }}_image_upload_config">{{ widget.image_upload_config|safe }}</script>
+<script type="application/json" id="{{ editor_id }}_image_removal_config">{{ widget.image_removal_config|safe }}</script>
+<script type="application/json" id="{{ editor_id }}_slash_menu_config">{{ widget.slash_menu_config|safe }}</script>

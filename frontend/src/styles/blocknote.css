@@ -1,6 +1,22 @@
-/* Django BlockNote Styles */
+/* Django BlockNote Unified Styles */
 
-/* Base widget styles */
+/* Base wrapper and container styles */
+.django-blocknote-wrapper {
+  position: relative;
+}
+
+.django-blocknote-container {
+  position: relative;
+  min-height: 200px;
+  background: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 0.2s ease;
+  /* Border will be applied by mode-specific classes or template styles */
+}
+
+/* Legacy widget class for backward compatibility */
 .django-blocknote-widget {
   min-height: 200px;
   border: 1px solid #ddd;
@@ -8,12 +24,6 @@
   padding: 12px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: white;
-}
-
-/* Container for the widget */
-.django-blocknote-container {
-  position: relative;
-  margin-bottom: 1rem;
 }
 
 /* Editor styles */
@@ -29,10 +39,18 @@
   transition: border-color 0.2s ease;
 }
 
+/* Focus states */
+.django-blocknote-container:focus-within,
 .blocknote-editor:focus,
 .blocknote-editor.focused {
   border-color: #007cba;
   box-shadow: 0 0 0 1px #007cba;
+}
+
+/* Hover states */
+.django-blocknote-container:hover,
+.blocknote-editor:hover {
+  border-color: #999;
 }
 
 /* Placeholder styles */
@@ -49,24 +67,53 @@
   display: none;
 }
 
-/* Content styles */
+/* Content styles - UNIFIED for both edit and readonly modes */
+.django-blocknote-container p,
+.django-blocknote-container .bn-inline-content,
 .blocknote-editor p {
   margin: 0 0 1em 0;
+  line-height: 1.5;
 }
 
+.django-blocknote-container p:last-child,
+.django-blocknote-container .bn-inline-content:last-child,
 .blocknote-editor p:last-child {
   margin-bottom: 0;
 }
 
+/* Ensure BlockNote's internal classes match our styling */
+.bn-inline-content {
+  margin: 0 0 1em 0;
+  line-height: 1.5;
+}
+
+.bn-inline-content:last-child {
+  margin-bottom: 0;
+}
+
+/* Mode-specific styling - these will be the primary border sources */
+.blocknote-readonly {
+  /* These styles will come from template inline styles */
+}
+
+.blocknote-editable {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  min-height: 200px;
+}
+
 /* Dark theme */
-.blocknote-editor[data-theme="dark"] {
+.blocknote-editor[data-theme="dark"],
+.django-blocknote-container[data-theme="dark"] {
   background: #1a1a1a;
   color: white;
   border-color: #444;
 }
 
 .blocknote-editor[data-theme="dark"]:focus,
-.blocknote-editor[data-theme="dark"].focused {
+.blocknote-editor[data-theme="dark"].focused,
+.django-blocknote-container[data-theme="dark"]:focus-within {
   border-color: #0096c7;
   box-shadow: 0 0 0 1px #0096c7;
 }
@@ -75,45 +122,27 @@
   color: #666;
 }
 
-/* Responsive styles */
-@media (max-width: 768px) {
-  .blocknote-editor {
-    min-height: 150px;
-    padding: 8px;
-  }
-  
-  .blocknote-editor .placeholder {
-    top: 8px;
-    left: 8px;
-  }
-}
-
-/* Animation styles */
-.blocknote-editor {
-  transition: all 0.2s ease;
-}
-
-.blocknote-editor:hover {
-  border-color: #999;
-}
-
 /* Error state */
-.blocknote-editor.error {
+.blocknote-editor.error,
+.django-blocknote-container.error {
   border-color: #dc3545;
 }
 
-.blocknote-editor.error:focus {
+.blocknote-editor.error:focus,
+.django-blocknote-container.error:focus-within {
   border-color: #dc3545;
   box-shadow: 0 0 0 1px #dc3545;
 }
 
 /* Loading state */
-.blocknote-editor.loading {
+.blocknote-editor.loading,
+.django-blocknote-container.loading {
   opacity: 0.6;
   pointer-events: none;
 }
 
-.blocknote-editor.loading::after {
+.blocknote-editor.loading::after,
+.django-blocknote-container.loading::after {
   content: '';
   position: absolute;
   top: 50%;
@@ -132,3 +161,73 @@
   100% { transform: rotate(360deg); }
 }
 
+/* Save status styles */
+.save-status {
+  transition: opacity 0.3s ease;
+}
+
+.save-success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.save-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Form integration */
+.django-blocknote-wrapper .errorlist {
+  color: #dc3545;
+  list-style: none;
+  margin: 0.25rem 0 0 0;
+  padding: 0;
+}
+
+.django-blocknote-wrapper .errorlist li {
+  font-size: 0.875em;
+}
+
+/* Empty state styling */
+.blocknote-empty-state {
+  text-align: center;
+  color: #9ca3af;
+  font-style: italic;
+  padding: 40px 20px;
+  background: #f9fafb;
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+}
+
+/* Loading placeholder */
+.blocknote-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-style: italic;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .django-blocknote-container,
+  .blocknote-editor {
+    min-height: 150px;
+    padding: 8px;
+  }
+  
+  .blocknote-editor .placeholder {
+    top: 8px;
+    left: 8px;
+  }
+  
+  .blocknote-readonly {
+    padding: 12px;
+  }
+  
+  .blocknote-editable {
+    padding: 8px;
+  }
+}
