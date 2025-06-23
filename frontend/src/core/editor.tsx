@@ -16,18 +16,27 @@ import type {
     SlashMenuConfig,
 } from '../types';
 
+// Define DocumentTemplate interface
+interface DocumentTemplate {
+    id: string;
+    title: string;
+    subtext: string;
+    aliases: string[];
+    group: string;
+    icon: string;
+    content: any[];
+}
+
 // Debounce hook
 function useDebounce<T extends (...args: any[]) => any>(
     callback: T,
     delay: number
 ): T {
     const timeoutRef = React.useRef<NodeJS.Timeout>();
-
     return React.useCallback(function(...args: Parameters<T>) {
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
         }
-
         timeoutRef.current = setTimeout(function() {
             callback(...args);
         }, delay);
@@ -44,6 +53,7 @@ export function BlockNoteEditor({
     uploadConfig = {},
     removalConfig = {},
     slashMenuConfig,
+    templates = [], // Add templates prop
     debounceDelay = 300, // Add configurable debounce delay
 }: {
     editorId: string;
@@ -54,6 +64,7 @@ export function BlockNoteEditor({
     uploadConfig?: UploadConfig;
     removalConfig?: RemovalConfig;
     slashMenuConfig?: SlashMenuConfig;
+    templates?: DocumentTemplate[]; // Add templates to props interface
     debounceDelay?: number; // New prop for debounce timing
 }) {
     console.log('Creating BlockNote 0.31.0 editor...');
@@ -82,6 +93,7 @@ export function BlockNoteEditor({
     // Effect to watch for data-readonly changes
     React.useEffect(function() {
         if (!editorId) return;
+
         const container = document.querySelector(`[data-editor-id="${editorId}"]`);
         if (!container) return;
 
@@ -143,13 +155,10 @@ export function BlockNoteEditor({
         if (editor && isEditable) {
             try {
                 const content = editor.document;
-
                 // Update current content immediately (for UI state)
                 setCurrentContent(content);
-
                 // Process expensive operations with debounce
                 debouncedProcessChange(content);
-
             } catch (error) {
                 console.warn('Error during immediate change handling:', error);
             }
@@ -187,7 +196,8 @@ export function BlockNoteEditor({
         return React.createElement(BlockNoteView, blockNoteViewProps,
             React.createElement(CustomSlashMenu, {
                 editor,
-                config: slashMenuConfig
+                config: slashMenuConfig,
+                templates // Pass templates to CustomSlashMenu
             })
         );
     }
@@ -195,5 +205,3 @@ export function BlockNoteEditor({
     // Default return without custom slash menu
     return React.createElement(BlockNoteView, blockNoteViewProps);
 }
-
-
