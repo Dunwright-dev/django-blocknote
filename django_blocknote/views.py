@@ -1,19 +1,32 @@
+# views.py
 import json
 import mimetypes
 
 import structlog
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Q
 from django.http import (
     Http404,
     JsonResponse,
 )
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
 from django.utils.translation import pgettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from django_blocknote.exceptions import (
     InvalidImageTypeError,
     PillowImageError,
 )
+
+# from django_blocknote.forms import (
+#     DocumentTemplateForm,
+#     DocumentTemplateQuickForm,
+#     DocumentTemplateSearchForm,
+# )
 from django_blocknote.image import (
     handle_uploaded_image,
     has_permission_to_upload_images,
@@ -21,8 +34,193 @@ from django_blocknote.image import (
     process_image_urls,
     trigger_cleanup_if_needed,
 )
+# from django_blocknote.mixins import BlockNoteUserViewMixin
+# from django_blocknote.models import DocumentTemplate
 
 logger = structlog.get_logger(__name__)
+
+
+# class DocumentTemplateCreateView(
+#     LoginRequiredMixin,
+#     BlockNoteUserViewMixin,
+#     CreateView,
+# ):
+#     """Create a new document template."""
+#
+#     model = DocumentTemplate
+#     form_class = DocumentTemplateForm
+#     template_name = "django_blocknote/template_create.html"
+#     success_url = reverse_lazy("django_blocknote:template_list")
+#
+#     def form_valid(self, form):
+#         # Automatically set the user to the current user
+#         form.instance.user = self.request.user
+#         messages.success(
+#             self.request,
+#             _('Template "{}" created successfully!').format(form.instance.title),
+#         )
+#         return super().form_valid(form)
+#
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context["page_title"] = _("Create Document Template")
+#         context["submit_text"] = _("Create Template")
+#         return context
+#
+#
+# class DocumentTemplateUpdateView(
+#     LoginRequiredMixin,
+#     BlockNoteUserViewMixin,
+#     UpdateView,
+# ):
+#     """Update an existing document template."""
+#
+#     model = DocumentTemplate
+#     form_class = DocumentTemplateForm
+#     template_name = "django_blocknote/template_update.html"
+#     success_url = reverse_lazy("django_blocknote:template_list")
+#
+#     def get_queryset(self):
+#         # Users can only edit their own templates
+#         return DocumentTemplate.objects.filter(user=self.request.user)
+#
+#     def form_valid(self, form):
+#         messages.success(
+#             self.request,
+#             _('Template "{}" updated successfully!').format(form.instance.title),
+#         )
+#         return super().form_valid(form)
+#
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context["page_title"] = _("Edit Template: {}").format(self.object.title)
+#         context["submit_text"] = _("Update Template")
+#         return context
+#
+#
+# class DocumentTemplateListView(LoginRequiredMixin, ListView):
+#     """List all document templates for the current user with search/filter."""
+#
+#     model = DocumentTemplate
+#     template_name = "django_blocknote/template_list.html"
+#     context_object_name = "templates"
+#     paginate_by = 20
+#
+#     def get_queryset(self):
+#         queryset = DocumentTemplate.objects.filter(user=self.request.user)
+#
+#         # Get search parameters
+#         search = self.request.GET.get("search")
+#         group = self.request.GET.get("group")
+#         show_hidden = self.request.GET.get("show_hidden")
+#
+#         # Apply search filter
+#         if search:
+#             queryset = queryset.filter(
+#                 Q(title__icontains=search)
+#                 | Q(subtext__icontains=search)
+#                 | Q(aliases__icontains=search)
+#                 | Q(group__icontains=search),
+#             )
+#
+#         # Apply group filter
+#         if group:
+#             queryset = queryset.filter(group=group)
+#
+#         # Apply visibility filter
+#         if not show_hidden:
+#             queryset = queryset.filter(show_in_menu=True)
+#
+#         return queryset.order_by("group", "title")
+#
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context["page_title"] = _("My Document Templates")
+#
+#         # Add search form
+#         context["search_form"] = DocumentTemplateSearchForm(
+#             data=self.request.GET,
+#             user=self.request.user,
+#         )
+#
+#         # Group templates by category for better organization
+#         templates_by_group = {}
+#         for template in context["templates"]:
+#             group = template.group or _("Uncategorized")
+#             if group not in templates_by_group:
+#                 templates_by_group[group] = []
+#             templates_by_group[group].append(template)
+#
+#         context["templates_by_group"] = templates_by_group
+#
+#         # Add stats
+#         total_templates = DocumentTemplate.objects.filter(
+#             user=self.request.user,
+#         ).count()
+#         visible_templates = DocumentTemplate.objects.filter(
+#             user=self.request.user,
+#             show_in_menu=True,
+#         ).count()
+#
+#         context["template_stats"] = {
+#             "total": total_templates,
+#             "visible": visible_templates,
+#             "hidden": total_templates - visible_templates,
+#         }
+#
+#         return context
+#
+#
+# class DocumentTemplateDeleteView(LoginRequiredMixin, DeleteView):
+#     """Delete a document template."""
+#
+#     model = DocumentTemplate
+#     template_name = "django_blocknote/template_confirm_delete.html"
+#     success_url = reverse_lazy("django_blocknote:template_list")
+#
+#     def get_queryset(self):
+#         # Users can only delete their own templates
+#         return DocumentTemplate.objects.filter(user=self.request.user)
+#
+#     def delete(self, request, *args, **kwargs):
+#         template = self.get_object()
+#         messages.success(
+#             request,
+#             _('Template "{}" deleted successfully!').format(template.title),
+#         )
+#         return super().delete(request, *args, **kwargs)
+#
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context["page_title"] = _("Delete Template")
+#         return context
+#
+#
+# class DocumentTemplateQuickCreateView(
+#     LoginRequiredMixin,
+#     BlockNoteUserViewMixin,
+#     CreateView,
+# ):
+#     """Quick template creation with minimal fields."""
+#
+#     model = DocumentTemplate
+#     form_class = DocumentTemplateQuickForm
+#     template_name = "django_blocknote/template_quick_create.html"
+#     success_url = reverse_lazy("django_blocknote:template_list")
+#
+#     def form_valid(self, form):
+#         form.instance.user = self.request.user
+#         messages.success(
+#             self.request,
+#             _('Quick template "{}" created successfully!').format(form.instance.title),
+#         )
+#         return super().form_valid(form)
+#
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context["page_title"] = _("Quick Create Template")
+#         context["submit_text"] = _("Create Template")
+#         return context
 
 
 @csrf_exempt
@@ -289,6 +487,6 @@ def upload_file(request):
 # except Exception as e:
 #     logger.error(f"BlockNote file upload error: {e!s}", exc_info=True)
 #     return JsonResponse(
-#         {"error": f"Upload failed: {e!s}", "code": "SERVER_ERROR"},
+#         {"error": f"Upload failed: {e!s}", "code": "SERVER_ERROR"},  # noqa: ERA001
 #         status=500,
 #     )

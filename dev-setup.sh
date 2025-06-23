@@ -417,22 +417,23 @@ TEST_MODELS_EOF
 
 cat > blog/forms.py << 'FORMS_EOF'
 from django import forms
+from django_blocknote.mixins import BlockNoteModelFormMixin, BlockNoteFormMixin
 from .models import BlogPost, Comment
 
-class BlogPostForm(forms.ModelForm):
+class BlogPostForm(BlockNoteModelFormMixin):
     class Meta:
         model = BlogPost
         fields = ['title', 'content']
         # No widget overrides - configuration comes from the model field
 
-class CommentForm(forms.ModelForm):
+class CommentForm(BlockNoteModelFormMixin):
     class Meta:
         model = Comment
         fields = ['author', 'content']
         # No widget overrides - configuration comes from the model field
 
 # Testing form with explicit widget configurations for various scenarios
-class UploadTestForm(forms.Form):
+class UploadTestForm(BlockNoteFormMixin):
     """Comprehensive form to test all upload configurations and edge cases"""
     
     # Standard configuration
@@ -472,6 +473,8 @@ FORMS_EOF
 cat > blog/views.py << 'VIEWS_EOF'
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
+from django.views.generic import CreateView, UpdateView
+from django_blocknote.mixins import BlockNoteUserViewMixin
 from .models import BlogPost, Comment
 from .forms import BlogPostForm, CommentForm, UploadTestForm
 
@@ -484,7 +487,7 @@ def post_detail(request, pk):
     comments = post.comments.all()
     
     if request.method == 'POST':
-        comment_form = CommentForm(request.POST)
+        comment_form = CommentForm(request.POST, user=request.user)
         if comment_form.is_valid():
             comment = comment_form.save(commit=False)
             comment.post = post
@@ -492,7 +495,7 @@ def post_detail(request, pk):
             messages.success(request, 'Comment added successfully!')
             return redirect('post_detail', pk=pk)
     else:
-        comment_form = CommentForm()
+        comment_form = CommentForm(user=request.user)
     
     return render(request, 'blog/post_detail.html', {
         'post': post,
@@ -500,15 +503,51 @@ def post_detail(request, pk):
         'comment_form': comment_form,
     })
 
+# Class-based views using the mixin
+class PostCreateView(BlockNoteUserViewMixin, CreateView):
+    model = BlogPost
+    form_class = BlogPostForm
+    template_name = 'blog/post_form.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Create New Post'
+        return context
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Blog post created successfully!')
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return f'/post/{self.object.pk}/'
+
+class PostUpdateView(BlockNoteUserViewMixin, UpdateView):
+    model = BlogPost
+    form_class = BlogPostForm
+    template_name = 'blog/post_form.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Edit Post'
+        return context
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Blog post updated successfully!')
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return f'/post/{self.object.pk}/'
+
+# Function-based view for backwards compatibility
 def post_create(request):
     if request.method == 'POST':
-        form = BlogPostForm(request.POST)
+        form = BlogPostForm(request.POST, user=request.user)
         if form.is_valid():
             post = form.save()
             messages.success(request, 'Blog post created successfully!')
             return redirect('post_detail', pk=post.pk)
     else:
-        form = BlogPostForm()
+        form = BlogPostForm(user=request.user)
     
     return render(request, 'blog/post_form.html', {
         'form': form,
@@ -518,13 +557,13 @@ def post_create(request):
 def post_edit(request, pk):
     post = get_object_or_404(BlogPost, pk=pk)
     if request.method == 'POST':
-        form = BlogPostForm(request.POST, instance=post)
+        form = BlogPostForm(request.POST, instance=post, user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, 'Blog post updated successfully!')
             return redirect('post_detail', pk=pk)
     else:
-        form = BlogPostForm(instance=post)
+        form = BlogPostForm(instance=post, user=request.user)
     
     return render(request, 'blog/post_form.html', {
         'form': form,
@@ -535,13 +574,13 @@ def post_edit(request, pk):
 def upload_test(request):
     """Comprehensive test page for upload configurations and edge cases"""
     if request.method == 'POST':
-        form = UploadTestForm(request.POST)
+        form = UploadTestForm(request.POST, user=request.user)
         if form.is_valid():
             messages.success(request, 'Upload test form submitted successfully! All editors passed validation.')
             # In a real app, you'd process the form data here
             return redirect('upload_test')
     else:
-        form = UploadTestForm()
+        form = UploadTestForm(user=request.user)
     
     return render(request, 'blog/upload_test.html', {
         'form': form,
@@ -556,8 +595,12 @@ from . import views
 urlpatterns = [
     path('', views.post_list, name='post_list'),
     path('post/<int:pk>/', views.post_detail, name='post_detail'),
-    path('post/new/', views.post_create, name='post_create'),
-    path('post/<int:pk>/edit/', views.post_edit, name='post_edit'),
+    # Use class-based views with mixins
+    path('post/new/', views.PostCreateView.as_view(), name='post_create'),
+    path('post/<int:pk>/edit/', views.PostUpdateView.as_view(), name='post_edit'),
+    # Keep function-based versions for testing
+    path('post/new-func/', views.post_create, name='post_create_func'),
+    path('post/<int:pk>/edit-func/', views.post_edit, name='post_edit_func'),
     path('upload-test/', views.upload_test, name='upload_test'),
 ]
 BLOG_URLS_EOF
@@ -1194,3 +1237,4 @@ echo "  • Progress indicators and error handling"
 echo ""
 echo "📁 Uploaded files go to: examples/demo_project/media/blocknote_uploads/"
 echo ""
+
