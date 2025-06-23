@@ -27,11 +27,22 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_inline_tabs",
     "sphinx.ext.todo",
+    "sphinxcontrib.mermaid",
 ]
+mermaid_output_format = "raw"  # or 'png'
+mermaid_params = ["--theme", "default"]
+
 myst_enable_extensions = [
     "colon_fence",
-    "mermaid",
+    "html_admonition",
 ]
+
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
+
+
 """
 The colon fence syntax is particularly useful because:
 
@@ -101,3 +112,4 @@ copybutton_prompt_is_regexp = True
 # is correctly pasted with the following setting
 """
 copybutton_line_continuation_character = "\\"
+
