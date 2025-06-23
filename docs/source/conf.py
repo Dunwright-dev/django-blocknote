@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
-__version__ = "2025.06.08.2"
+__version__ = "2025.06.23.1"
 
 project = "django-blocknote"
 copyright = "2025, Ryan Sevelj & Mark Sevelj"
@@ -112,4 +112,3 @@ copybutton_prompt_is_regexp = True
 # is correctly pasted with the following setting
 """
 copybutton_line_continuation_character = "\\"
-
