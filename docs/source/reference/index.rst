@@ -9,6 +9,7 @@ Reference material is information-oriented technical descriptions of the machine
    :caption: Reference Documentation:
 
    api
+   document-templates
 
 What's Included
 ===============

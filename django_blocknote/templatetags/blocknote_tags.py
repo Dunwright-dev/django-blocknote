@@ -498,45 +498,6 @@ def get_user_theme(user):
     return None
 
 
-def get_user_theme(user):
-    """Robust user theme detection supporting multiple patterns."""
-    if not user or not user.is_authenticated:
-        return None
-
-    # Check possible theme attribute paths
-    theme_paths = [
-        ("profile", "theme"),
-        ("userprofile", "theme"),
-        ("preferences", "theme"),
-        ("user_preferences", "theme"),
-        ("settings", "theme"),
-    ]
-
-    for relation_name, theme_attr in theme_paths:
-        try:
-            if hasattr(user, relation_name):
-                relation_obj = getattr(user, relation_name, None)
-                if relation_obj and hasattr(relation_obj, theme_attr):
-                    theme_value = getattr(relation_obj, theme_attr, None)
-                    if theme_value in ["light", "dark", "auto"]:
-                        return theme_value
-        except (AttributeError, TypeError):
-            continue
-
-    # Check direct theme attributes on user
-    direct_attrs = ["theme", "theme_preference", "ui_theme", "color_scheme"]
-    for attr_name in direct_attrs:
-        try:
-            if hasattr(user, attr_name):
-                theme_value = getattr(user, attr_name, None)
-                if theme_value in ["light", "dark", "auto"]:
-                    return theme_value
-        except (AttributeError, TypeError):
-            continue
-
-    return None
-
-
 @register.simple_tag(takes_context=True)
 def blocknote_viewer(
     context,

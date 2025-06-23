@@ -39,3 +39,10 @@ export type {
 export type {
     SlashMenuConfig,
 } from './slash-menu';
+
+export type {
+    DocumentTemplate,
+} from './document_template';
+
+
+

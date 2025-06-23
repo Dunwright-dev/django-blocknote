@@ -9,6 +9,204 @@ from django.urls import NoReverseMatch, reverse
 
 from django_blocknote.assets import get_vite_asset
 
+logger = structlog.get_logger(__name__)
+templates = [
+    {
+        "id": "1",
+        "title": "Meeting Notes",
+        "subtext": "Agenda & actions",
+        "aliases": ["meeting", "notes", "agenda"],
+        "group": "Business",
+        "icon": "meeting",
+        "content": [
+            {
+                "id": "block-1",
+                "type": "heading",
+                "props": {"level": 1},
+                "content": [{"type": "text", "text": "Meeting Title"}],
+            },
+            {
+                "id": "block-2",
+                "type": "paragraph",
+                "content": [{"type": "text", "text": "Date: "}],
+            },
+            {
+                "id": "block-3",
+                "type": "heading",
+                "props": {"level": 2},
+                "content": [{"type": "text", "text": "Attendees"}],
+            },
+            {
+                "id": "block-4",
+                "type": "bulletListItem",
+                "content": [{"type": "text", "text": "Attendee 1"}],
+            },
+            {
+                "id": "block-5",
+                "type": "heading",
+                "props": {"level": 2},
+                "content": [{"type": "text", "text": "Agenda"}],
+            },
+            {
+                "id": "block-6",
+                "type": "bulletListItem",
+                "content": [{"type": "text", "text": "Item 1"}],
+            },
+            {
+                "id": "block-7",
+                "type": "heading",
+                "props": {"level": 2},
+                "content": [{"type": "text", "text": "Action Items"}],
+            },
+            {
+                "id": "block-8",
+                "type": "checkListItem",
+                "content": [{"type": "text", "text": "Action item 1"}],
+            },
+        ],
+    },
+    {
+        "id": "2",
+        "title": "Invoice Template",
+        "subtext": "Billing format",
+        "aliases": ["invoice", "bill", "payment"],
+        "group": "Finance",
+        "icon": "receipt",
+        "content": [
+            {
+                "id": "block-1",
+                "type": "heading",
+                "props": {"level": 1},
+                "content": [{"type": "text", "text": "INVOICE"}],
+            },
+            {
+                "id": "block-2",
+                "type": "paragraph",
+                "content": [{"type": "text", "text": "Invoice #: "}],
+            },
+            {
+                "id": "block-3",
+                "type": "paragraph",
+                "content": [{"type": "text", "text": "Date: "}],
+            },
+            {
+                "id": "block-4",
+                "type": "heading",
+                "props": {"level": 2},
+                "content": [{"type": "text", "text": "Bill To:"}],
+            },
+            {
+                "id": "block-5",
+                "type": "paragraph",
+                "content": [{"type": "text", "text": "Customer Name"}],
+            },
+        ],
+    },
+    {
+        "id": "3",
+        "title": "Daily Journal",
+        "subtext": "Personal notes",
+        "aliases": ["journal", "diary", "daily"],
+        "group": "Personal",
+        "icon": "book",
+        "content": [
+            {
+                "id": "block-1",
+                "type": "heading",
+                "props": {"level": 1},
+                "content": [{"type": "text", "text": "Daily Journal Entry"}],
+            },
+            {
+                "id": "block-2",
+                "type": "paragraph",
+                "content": [{"type": "text", "text": "Date: "}],
+            },
+            {
+                "id": "block-3",
+                "type": "heading",
+                "props": {"level": 2},
+                "content": [{"type": "text", "text": "Mood"}],
+            },
+            {
+                "id": "block-4",
+                "type": "paragraph",
+                "content": [{"type": "text", "text": ""}],
+            },
+            {
+                "id": "block-5",
+                "type": "heading",
+                "props": {"level": 2},
+                "content": [{"type": "text", "text": "Key Events"}],
+            },
+            {
+                "id": "block-6",
+                "type": "bulletListItem",
+                "content": [{"type": "text", "text": "Event 1"}],
+            },
+            {
+                "id": "block-7",
+                "type": "heading",
+                "props": {"level": 2},
+                "content": [{"type": "text", "text": "Reflections"}],
+            },
+            {
+                "id": "block-8",
+                "type": "paragraph",
+                "content": [{"type": "text", "text": ""}],
+            },
+        ],
+    },
+]
+
+"""
+[
+    {
+        "id": "block-1",
+        "type": "heading",
+        "props": {"level": 1},
+        "content": [{"type": "text", "text": "Meeting Title"}]
+    },
+    {
+        "id": "block-2",
+        "type": "paragraph",
+        "content": [{"type": "text", "text": "Date: "}]
+    },
+    {
+        "id": "block-3",
+        "type": "heading",
+        "props": {"level": 2},
+        "content": [{"type": "text", "text": "Attendees"}]
+    },
+    {
+        "id": "block-4",
+        "type": "bulletListItem",
+        "content": [{"type": "text", "text": "Attendee 1"}]
+    },
+    {
+        "id": "block-5",
+        "type": "heading",
+        "props": {"level": 2},
+        "content": [{"type": "text", "text": "Agenda"}]
+    },
+    {
+        "id": "block-6",
+        "type": "bulletListItem",
+        "content": [{"type": "text", "text": "Item 1"}]
+    },
+    {
+        "id": "block-7",
+        "type": "heading",
+        "props": {"level": 2},
+        "content": [{"type": "text", "text": "Action Items"}]
+    },
+    {
+        "id": "block-8",
+        "type": "checkListItem",
+        "content": [{"type": "text", "text": "Action item 1"}]
+    }
+]
+"""
+
 
 class BlockNoteWidget(forms.Textarea):
     """
@@ -106,6 +304,10 @@ class BlockNoteWidget(forms.Textarea):
             except (TypeError, ValueError):
                 return fallback
 
+        # Get user templates - this replaces the hardcoded templates
+        doc_templates = self._get_user_templates()
+
+        # print(f"  🧩 Templates number {len(doc_templates)}\n{doc_templates}")
         # Collect and serialize all config data
         configs = {
             "editor_config": self.editor_config.copy() if self.editor_config else {},
@@ -113,11 +315,12 @@ class BlockNoteWidget(forms.Textarea):
             "image_removal_config": self._get_image_removal_config(),
             "slash_menu_config": self._get_slash_menu_config(),
             "initial_content": self.format_value(value),
+            "doc_templates": doc_templates,  # Now uses real user templates
         }
 
         # Add all configs to context as JSON
         for key, config_data in configs.items():
-            fallback = "[]" if key == "initial_content" else "{}"
+            fallback = "[]" if key in ["initial_content", "doc_templates"] else "{}"
             context["widget"][key] = safe_json_dump(config_data, fallback)
 
         # Add additional widget data
@@ -134,9 +337,9 @@ class BlockNoteWidget(forms.Textarea):
 
         # Debug output in development
         if getattr(settings, "DEBUG", False):
-            print(f"\n{'=' * 50}")  # noqa: T201
-            print(f"🧩 BlockNote Widget Context: {widget_id}")  # noqa: T201
-            print(f"{'=' * 50}")  # noqa: T201
+            print(f"\n{'=' * 50}")
+            print(f"    🧩 BlockNote Widget Context: {widget_id}")
+            print(f"{'=' * 50}")
             for key in configs:
                 json_value = context["widget"][key]
                 display_key = key.replace("_", " ").title()
@@ -146,10 +349,21 @@ class BlockNoteWidget(forms.Textarea):
                         if len(json_value) > 100
                         else json_value
                     )
-                    print(f"📝 {display_key:.<20} {content_preview}")  # noqa: T201
+                    print(f"📝 {display_key:.<20} {content_preview}")
+                elif key == "doc_templates":
+                    template_count = (
+                        len(configs[key]) if isinstance(configs[key], list) else 0
+                    )
+                    print(
+                        f"📄 {display_key:.<20} {template_count} templates for  user {configs['doc_templates']} ",  # {self.user.username if self.user else 'None'}",
+                    )
+
+                    # print(
+                    #     f"📄 {display_key:.<20} {template_count} templates for user {self.user.username if self.user else 'None'}",
+                    # )
                 else:
-                    print(f"⚙️  {display_key:.<20} {json_value}")  # noqa: T201
-            print(f"{'=' * 50}\n")  # noqa: T201
+                    print(f"⚙️  {display_key:.<20} {json_value}")
+            print(f"{'=' * 50}\n")
 
         return context
 
@@ -160,7 +374,6 @@ class BlockNoteWidget(forms.Textarea):
         2. Settings config - fallback
         3. Django URL resolution - only if no explicit URL provided
         """
-        logger = structlog.get_logger(__name__)
 
         # Start with global settings
         base_config = getattr(settings, "DJ_BN_IMAGE_UPLOAD_CONFIG", {}).copy()
@@ -194,7 +407,6 @@ class BlockNoteWidget(forms.Textarea):
         2. Settings config - fallback
         3. Django URL resolution - only if no explicit URL provided
         """
-        logger = structlog.get_logger(__name__)
 
         # Start with global settings
         base_config = getattr(settings, "DJ_BN_IMAGE_REMOVAL_CONFIG", {}).copy()
@@ -226,7 +438,6 @@ class BlockNoteWidget(forms.Textarea):
         Get slash menu configuration based on menu_type from global settings.
         Widget-specific config acts as override only.
         """
-        logger = structlog.get_logger(__name__)
 
         # Get all configurations from settings
         all_configs = getattr(settings, "DJ_BN_SLASH_MENU_CONFIGS", {})
@@ -255,3 +466,32 @@ class BlockNoteWidget(forms.Textarea):
 
         return config
 
+    def _get_user_templates(self):
+        """Get templates for the current user, with fallback to empty list"""
+        # Get user from attrs (set by form mixin)
+
+        # User = get_user_model()
+        # user = User.objects.first()
+        # print(f"USER {user}")
+
+        user = self.attrs.get("user", None)
+
+        if not user or not getattr(user, "is_authenticated", False):
+            if settings.DEBUG:
+                return templates
+            return []
+
+        try:
+            # Import here to avoid circular imports
+            from .models import DocumentTemplate
+
+            return DocumentTemplate.get_cached_templates(user)
+        except Exception as e:
+            logger.exception(
+                event="_get_user_templates",
+                msg='"❌ Error loading user templates',
+                data={
+                    "error": e,
+                },
+            )
+            return []

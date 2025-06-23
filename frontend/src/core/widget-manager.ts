@@ -8,6 +8,17 @@ import type {
     SlashMenuConfig,
 } from '../types';
 
+// Define DocumentTemplate interface
+interface DocumentTemplate {
+    id: string;
+    title: string;
+    subtext: string;
+    aliases: string[];
+    group: string;
+    icon: string;
+    content: any[];
+}
+
 // Enhanced widget initialization with cleanup tracking
 export const blockNoteRoots = new Map(); // Track React roots for cleanup
 
@@ -17,11 +28,13 @@ export function initWidgetWithData(
     uploadConfig: UploadConfig,
     removalConfig: RemovalConfig,
     slashMenuConfig: SlashMenuConfig,
+    docTemplates: DocumentTemplate[], // Add templates parameter
     initialContent: unknown = null,
     readonly: boolean = false
 ): void {
     console.log('Initializing BlockNote widget:', editorId);
-    console.log('🎯 Slash menu config for', editorId, ':', slashMenuConfig);  // Debug log
+    console.log('🎯 Slash menu config for', editorId, ':', slashMenuConfig);
+    console.log('📄 Templates for', editorId, ':', docTemplates?.length || 0); // Debug templates
 
     const container = document.getElementById(editorId + '_editor');
     const textarea = document.getElementById(editorId);
@@ -112,7 +125,8 @@ export function initWidgetWithData(
             editorConfig: editorConfig,
             uploadConfig: uploadConfig,
             removalConfig: removalConfig,
-            slashMenuConfig: slashMenuConfig,  // Add slash menu config to props
+            slashMenuConfig: slashMenuConfig,
+            templates: docTemplates, // Pass templates to BlockNoteEditor
             onChange: handleChange,
             readonly: readonly,
         });
@@ -123,11 +137,11 @@ export function initWidgetWithData(
 
         console.log('✅ BlockNote widget rendered successfully:', editorId);
         console.log(`   ⚡ Custom slash menu: ${slashMenuConfig?.enabled ? 'ENABLED' : 'DISABLED'}`);
+        console.log(`   📄 Templates loaded: ${docTemplates?.length || 0}`);
 
     } catch (error) {
         console.error('Critical widget initialization error:', error);
         textareaElement.value = '[]';
-
         container.innerHTML = `
             <div style="border: 2px solid #ef4444; padding: 16px; border-radius: 8px; background: #fef2f2;">
                 <div style="font-weight: 600; margin-bottom: 8px; color: #dc2626;">

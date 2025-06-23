@@ -2,6 +2,18 @@
 
 <!--next-version-placeholder-->
 
+## [2025.06.23.1]
+
+### Maintenance
+- Add slash menu and context passing (template) [#30](https://github.com/Dunwright-dev/django-blocknote/pull/30)
+
+### Documentation
+- Add template data flow reference (template) [#30](https://github.com/Dunwright-dev/django-blocknote/pull/30)
+
+### Features
+- Add default document templates (template) [#30](https://github.com/Dunwright-dev/django-blocknote/pull/30)
+
+
 ## [2025.06.08.2]
 
 ### Maintenance

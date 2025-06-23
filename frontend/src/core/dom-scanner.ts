@@ -1,6 +1,17 @@
 // core/dom-scanner.ts
 import type { EditorConfig, UploadConfig, RemovalConfig, SlashMenuConfig } from '../types';
 
+// Define DocumentTemplate interface locally if not in main types
+interface DocumentTemplate {
+    id: string;
+    title: string;
+    subtext: string;
+    aliases: string[];
+    group: string;
+    icon: string;
+    content: any[];
+}
+
 export function scanForWidgets(
     rootElement: Document | Element = document,
     initWidgetCallback: (
@@ -9,6 +20,7 @@ export function scanForWidgets(
         uploadConfig: UploadConfig,
         removalConfig: RemovalConfig,
         slashMenuConfig: SlashMenuConfig,
+        docTemplates: DocumentTemplate[], // Add templates parameter
         initialContent: unknown,
         readonly: boolean
     ) => void
@@ -47,7 +59,6 @@ export function scanForWidgets(
         const imageUploadConfigScript = document.getElementById(`${editorId}_image_upload_config`);
         console.log(`🔍 Looking for upload config script: ${editorId}_image_upload_config`);
         console.log(`📜 Upload config script element:`, imageUploadConfigScript);
-
         if (imageUploadConfigScript) {
             try {
                 uploadConfig = JSON.parse(imageUploadConfigScript.textContent || '{}');
@@ -70,7 +81,6 @@ export function scanForWidgets(
         const imageRemovalConfigScript = document.getElementById(`${editorId}_image_removal_config`);
         console.log(`🔍 Looking for removal config script: ${editorId}_image_removal_config`);
         console.log(`📜 Removal config script element:`, imageRemovalConfigScript);
-
         if (imageRemovalConfigScript) {
             try {
                 removalConfig = JSON.parse(imageRemovalConfigScript.textContent || '{}');
@@ -93,7 +103,6 @@ export function scanForWidgets(
         const slashMenuConfigScript = document.getElementById(`${editorId}_slash_menu_config`);
         console.log(`🔍 Looking for slash menu config script: ${editorId}_slash_menu_config`);
         console.log(`📜 Slash menu config script element:`, slashMenuConfigScript);
-
         if (slashMenuConfigScript) {
             try {
                 slashMenuConfig = JSON.parse(slashMenuConfigScript.textContent || '{}');
@@ -107,6 +116,24 @@ export function scanForWidgets(
             slashMenuConfig = {
                 enabled: false  // Default to disabled if no config found
             };
+        }
+
+        // Get DOCUMENT TEMPLATES from script tag with ID "_doc_templates"
+        let docTemplates: DocumentTemplate[] = [];
+        const docTemplatesScript = document.getElementById(`${editorId}_doc_templates`);
+        console.log(`🔍 Looking for document templates script: ${editorId}_doc_templates`);
+        console.log(`📜 Document templates script element:`, docTemplatesScript);
+        if (docTemplatesScript) {
+            try {
+                docTemplates = JSON.parse(docTemplatesScript.textContent || '[]');
+                console.log(`📄 Document templates loaded for ${editorId}:`, docTemplates);
+                console.log(`   Found ${docTemplates.length} templates`);
+            } catch (e) {
+                console.warn(`⚠️ Invalid document templates for ${editorId}:`, e);
+                docTemplates = []; // Fallback to empty array
+            }
+        } else {
+            console.warn(`⚠️ No document templates script found for ${editorId}_doc_templates - using empty array`);
         }
 
         // Get content from script tag with ID "_content"
@@ -134,16 +161,18 @@ export function scanForWidgets(
             }
         }
 
-        // Initialize with all configs
+        // Initialize with all configs including templates
         console.log(`✅ Initializing BlockNote ${isReadonly ? 'viewer' : 'widget'}: ${editorId}`);
         console.log(`   🎯 Slash menu ${slashMenuConfig.enabled ? 'ENABLED' : 'DISABLED'} for ${editorId}`);
+        console.log(`   📄 Templates: ${docTemplates.length} available for ${editorId}`);
 
         initWidgetCallback(
             editorId,
             editorConfig,
             uploadConfig,
             removalConfig,
-            slashMenuConfig,  // Pass slash menu config
+            slashMenuConfig,
+            docTemplates,  // Pass templates to callback
             content,
             isReadonly
         );
