@@ -9,6 +9,7 @@ How-to guides are problem-oriented directions that guide you through the steps i
    :caption: Available Guides:
 
    quickstart
+   doc-templates
    nodejs_installation_guide
 
 Problem-Solving Approach
