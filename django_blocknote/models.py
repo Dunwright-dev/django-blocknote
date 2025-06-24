@@ -197,8 +197,8 @@ class DocumentTemplate(models.Model):
         ),
     )
 
-    aliases = models.JSONField(
-        default=list,
+    aliases = models.CharField(
+        max_length=500,
         blank=True,
         verbose_name=_(
             "Verbose name",
@@ -206,7 +206,7 @@ class DocumentTemplate(models.Model):
         ),
         help_text=_(
             "Help text",
-            "Search aliases for slash menu filtering (comma-separated string or list)",
+            "Comma-separated search aliases for slash menu filtering",
         ),
     )
 
@@ -451,18 +451,27 @@ class DocumentTemplate(models.Model):
             )
 
             # Build templates list efficiently with list comprehension
-            templates = [
-                {
-                    "id": str(template_data["pk"]),
-                    "title": template_data["title"],
-                    "subtext": template_data["subtext"] or "",
-                    "aliases": template_data["aliases"] or [],
-                    "group": template_data["group"] or "",
-                    "icon": template_data["icon"],
-                    "content": template_data["content"],
-                }
-                for template_data in templates_qs
-            ]
+            templates = []
+            for template_data in templates_qs:
+                # Parse JSON string to get list
+                try:
+                    import json
+
+                    aliases_list = json.loads(template_data["aliases"] or "[]")
+                except (json.JSONDecodeError, ValueError):
+                    aliases_list = []  # Fallback for invalid JSON
+
+                templates.append(
+                    {
+                        "id": str(template_data["pk"]),
+                        "title": template_data["title"],
+                        "subtext": template_data["subtext"] or "",
+                        "aliases": aliases_list,  # Already a list from JSON
+                        "group": template_data["group"] or "",
+                        "icon": template_data["icon"],
+                        "content": template_data["content"],
+                    },
+                )
 
             # Use configurable cache timeout
             timeout = cls.get_cache_timeout()
@@ -479,7 +488,7 @@ class DocumentTemplate(models.Model):
                 },
             )
 
-            return templates  # noqa: TRY300
+            return templates
 
         except Exception as e:
             logger.exception(

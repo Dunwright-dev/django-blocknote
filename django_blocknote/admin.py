@@ -61,7 +61,6 @@ class BlockNoteAdminMixin:
     def _setup_blocknote_previews(self):
         """Automatically create preview methods for BlockNote fields"""
         blocknote_fields = []
-
         for field in self.model._meta.get_fields():
             if isinstance(field, BlockNoteField):
                 blocknote_fields.append(field.name)
@@ -70,14 +69,26 @@ class BlockNoteAdminMixin:
                 # Create dynamic preview method
                 def make_preview_method(field_name):
                     def preview_method(self, obj):
+                        # Handle case where obj is None (during creation)
+                        if obj is None or obj.pk is None:
+                            return format_html(
+                                '<em style="color: #999;">Save to see preview</em>',
+                            )
+
                         content = getattr(obj, field_name)
                         if content:
-                            template = Template(
-                                "{% load blocknote_tags %}{% blocknote_viewer content %}",
-                            )
-                            return format_html(
-                                template.render(Context({"content": content})),
-                            )
+                            try:
+                                template = Template(
+                                    "{% load blocknote_tags %}{% blocknote_viewer content %}",
+                                )
+                                return format_html(
+                                    template.render(Context({"content": content})),
+                                )
+                            except Exception as e:
+                                return format_html(
+                                    '<em style="color: #d32f2f;">Preview error: {}</em>',
+                                    str(e),
+                                )
                         return format_html('<em style="color: #999;">No content</em>')
 
                     preview_method.short_description = (
@@ -98,6 +109,19 @@ class BlockNoteAdminMixin:
             existing_readonly = list(getattr(self, "readonly_fields", []))
             preview_fields = [f"{field}_preview" for field in blocknote_fields]
             self.readonly_fields = existing_readonly + preview_fields
+
+    def get_readonly_fields(self, request, obj=None):
+        """Override to handle preview fields when creating new objects"""
+        readonly_fields = super().get_readonly_fields(request, obj)
+
+        # If creating a new object, remove preview fields from readonly
+        if obj is None or obj.pk is None:
+            # Filter out preview fields for new objects
+            readonly_fields = [
+                field for field in readonly_fields if not field.endswith("_preview")
+            ]
+
+        return readonly_fields
 
 
 class BlockNoteModelAdmin(BlockNoteAdminMixin, BaseModelAdmin):
@@ -124,8 +148,9 @@ class DocumentTemplateAdmin(BlockNoteModelAdmin):
         """Make everything readonly for non-superusers viewing others' templates"""
         readonly_fields = list(self.readonly_fields)
 
-        if not request.user.is_superuser:
-            if obj and obj.user != request.user:
+        # Only apply readonly logic for existing objects
+        if obj is not None and not request.user.is_superuser:
+            if obj.user != request.user:
                 # Admin staff viewing someone else's template - everything readonly
                 readonly_fields.extend(
                     [

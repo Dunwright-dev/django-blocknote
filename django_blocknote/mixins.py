@@ -1,4 +1,6 @@
 # mixins.py
+import json
+
 from django import forms
 
 from .widgets import BlockNoteWidget
@@ -107,29 +109,32 @@ class BlockNoteUserFormMixin:
             )
 
     def clean_aliases(self):
-        """Convert CSV string input to JSON list for aliases field"""
+        """Convert CSV string input to JSON string for storage"""
         aliases = self.cleaned_data.get("aliases")
 
         if not aliases:
-            return []
-
-        # If it's already a list (programmatic input), return as-is
-        if isinstance(aliases, list):
-            return aliases
+            return "[]"  # Empty JSON array
 
         # Handle string input (CSV from forms)
         if isinstance(aliases, str):
+            # Check if it's already JSON
             try:
-                # Try parsing as JSON first (for API/programmatic input)
-                import json
-
-                return json.loads(aliases)
+                parsed = json.loads(aliases)  # noqa: F823
+                if isinstance(parsed, list):
+                    return aliases  # Already valid JSON
             except (json.JSONDecodeError, ValueError):
-                # Treat as CSV string (normal form input)
-                return [alias.strip() for alias in aliases.split(",") if alias.strip()]
+                pass
+
+            # Treat as CSV and convert to JSON
+            alias_list = [
+                alias.strip() for alias in aliases.split(",") if alias.strip()
+            ]
+            import json
+
+            return json.dumps(alias_list)
 
         # Fallback for unexpected types
-        return []
+        return "[]"
 
 
 class BlockNoteUserFormsetMixin:
