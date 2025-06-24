@@ -13,6 +13,9 @@ class DjangoBlockNoteConfig(AppConfig):
 
     def ready(self):
         """Configure BlockNote settings with intelligent defaults."""
+
+        import django_blocknote.signals  # noqa: F401
+
         if not hasattr(settings, "DJ_BN_VIEWER_CONFIG"):
             # Minimal config
             settings.DJ_BN_VIEWER_CONFIG = {
@@ -171,6 +174,36 @@ class DjangoBlockNoteConfig(AppConfig):
                         "enable_search": True,
                         "max_items_shown": 12,
                         "show_descriptions": True,
+                        "show_icons": True,
+                        "show_keyboard_shortcuts": True,
+                    },
+                },
+                # Default user configuration - limited feature set
+                "template": {
+                    "enabled": True,
+                    "mode": "filtered",
+                    "disabled_items": [
+                        # Media blocks(except image) Not implemented
+                        "video",
+                        "audio",
+                        "file",
+                        "image",
+                        # Advanced features not for general users
+                        "code",  # Code blocks
+                        "equation",  # Math equations
+                        # "table",  # Tables (can be complex)
+                        "embed",  # External embeds
+                        "column",  # Layout columns
+                        # "pageBreak",  # Page breaks
+                        "template",  # Template blocks
+                        "variable",  # Variable blocks
+                        "form",  # Form blocks
+                        "button",  # Interactive buttons
+                    ],
+                    "advanced_options": {
+                        "enable_search": True,
+                        "max_items_shown": 8,  # Fewer items to avoid overwhelming
+                        "show_descriptions": True,  # Help users understand options
                         "show_icons": True,
                         "show_keyboard_shortcuts": True,
                     },

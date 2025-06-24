@@ -68,14 +68,7 @@ class BlockNoteUserFormMixin:
     """
     Form mixin to automatically configure BlockNote widgets with user templates.
     Automatically detects BlockNote widgets and passes user context via widget attrs.
-
-    Usage:
-        class MyForm(BlockNoteUserFormMixin, forms.ModelForm):
-            content = forms.CharField(widget=BlockNoteWidget())
-
-            class Meta:
-                model = MyModel
-                fields = ['content']
+    Also handles CSV to JSON conversion for aliases fields.
     """
 
     def __init__(self, *args, **kwargs):
@@ -83,7 +76,6 @@ class BlockNoteUserFormMixin:
         # Extract user from kwargs BEFORE calling super() to avoid TypeError
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
-
         # Configure all BlockNote widgets with user context
         self._configure_blocknote_widgets()
 
@@ -91,7 +83,6 @@ class BlockNoteUserFormMixin:
         """Find and configure all BlockNote widgets with user context via attrs"""
         if not self.user:
             return
-
         configured_count = 0
         for field_name, field in self.fields.items():
             if isinstance(field.widget, BlockNoteWidget):
@@ -99,11 +90,10 @@ class BlockNoteUserFormMixin:
                 field.widget.attrs.update(
                     {
                         "user": self.user,
-                        "field_name": field_name,  # Could be useful for field-specific logic
+                        "field_name": field_name,
                     },
                 )
                 configured_count += 1
-
                 # Debug logging in development
                 if hasattr(self, "_debug_widget_config"):
                     print(
@@ -115,6 +105,31 @@ class BlockNoteUserFormMixin:
             print(
                 f"🎯 Configured {configured_count} BlockNote widget(s) for user {self.user.username}",
             )
+
+    def clean_aliases(self):
+        """Convert CSV string input to JSON list for aliases field"""
+        aliases = self.cleaned_data.get("aliases")
+
+        if not aliases:
+            return []
+
+        # If it's already a list (programmatic input), return as-is
+        if isinstance(aliases, list):
+            return aliases
+
+        # Handle string input (CSV from forms)
+        if isinstance(aliases, str):
+            try:
+                # Try parsing as JSON first (for API/programmatic input)
+                import json
+
+                return json.loads(aliases)
+            except (json.JSONDecodeError, ValueError):
+                # Treat as CSV string (normal form input)
+                return [alias.strip() for alias in aliases.split(",") if alias.strip()]
+
+        # Fallback for unexpected types
+        return []
 
 
 class BlockNoteUserFormsetMixin:
@@ -252,4 +267,3 @@ Add _debug_widget_config = True to your form class to see configuration debug ou
             model = MyModel
             fields = ['content']
 """
-
