@@ -8,7 +8,6 @@ Reference material is information-oriented technical descriptions of the machine
    :maxdepth: 2
    :caption: Reference Documentation:
 
-   api
    document-templates
 
 What's Included
