@@ -8,6 +8,7 @@ Explanation is understanding-oriented discussion that clarifies and illuminates 
    :maxdepth: 2
    :caption: Topics Explained:
 
+   document-template-system
    vite_integration_docs
 
 Understanding the Project
