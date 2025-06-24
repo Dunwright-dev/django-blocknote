@@ -2,6 +2,19 @@
 
 <!--next-version-placeholder-->
 
+## [2025.06.24.1]
+
+### Maintenance
+- Add basic document template machinery (template) [#32](https://github.com/Dunwright-dev/django-blocknote/pull/32)
+
+### Documentation
+- Add doc templates management (how-to) [#32](https://github.com/Dunwright-dev/django-blocknote/pull/32)
+- Add reference and explanation documents (template) [#32](https://github.com/Dunwright-dev/django-blocknote/pull/32)
+
+### Features
+- Add user template model and admin (template) [#32](https://github.com/Dunwright-dev/django-blocknote/pull/32)
+
+
 ## [2025.06.23.1]
 
 ### Maintenance
