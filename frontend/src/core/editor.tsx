@@ -15,7 +15,9 @@ import type {
     ImageRemovalConfig,
     SlashMenuConfig,
 } from '../types';
-
+import {
+    processDjangoEditorConfig
+} from '../utils/editorConfig';
 // Define DocumentTemplate interface
 interface DocumentTemplate {
     id: string;
@@ -67,7 +69,10 @@ export function BlockNoteEditor({
     templates?: DocumentTemplate[]; // Add templates to props interface
     debounceDelay?: number; // New prop for debounce timing
 }) {
-    console.log('Creating BlockNote 0.31.0 editor...');
+    console.debug('Creating BlockNote 0.31.0 editor...');
+    const editor1 = useCreateBlockNote({
+        dictionary: "this will cause an error" // TypeScript will tell you what it expects
+    });
 
     // Use upload hook - cast to ImageUploadConfig since we know it's images for now
     const { uploadFile } = useBlockNoteImageUpload(uploadConfig as ImageUploadConfig);
@@ -82,12 +87,67 @@ export function BlockNoteEditor({
     // Separate state for the most recent content (for immediate UI updates)
     const [currentContent, setCurrentContent] = React.useState(initialContent);
 
-    // Create editor with upload configuration
+    // Process Django config, but conditionally based on readonly state
+    const processedEditorConfig = React.useMemo(() => {
+        console.debug('🔍 READONLY DEBUG - Processing config:', {
+            readonly,
+            isReadonly,
+            editorId,
+            originalConfig: editorConfig
+        });
+
+        const config = processDjangoEditorConfig(editorConfig);
+
+        console.debug('🔍 READONLY DEBUG - After processDjangoEditorConfig:', {
+            config,
+            hasDictionary: !!config.dictionary,
+            isEditable: config.isEditable,
+            djangoReadonly: config._django_readonly
+        });
+
+        // Check multiple readonly sources
+        const isReadOnlyMode = readonly || isReadonly || config._django_readonly;
+
+        if (isReadOnlyMode) {
+            console.debug('🔍 READONLY DEBUG - Editor is readonly, disabling features');
+
+            // For readonly editors, disable editing features
+            delete config.dictionary;
+            config.isEditable = false;
+
+            // Clean up Django flag
+            delete config._django_readonly;
+
+            console.debug('🔍 READONLY DEBUG - After readonly processing:', {
+                config,
+                hasDictionary: !!config.dictionary,
+                isEditable: config.isEditable
+            });
+        } else {
+            console.debug('🔍 READONLY DEBUG - Editor is editable, keeping dictionary');
+            // Clean up Django flag for editable editors too
+            delete config._django_readonly;
+        }
+
+        return config;
+    }, [editorConfig, readonly, isReadonly]);
+
+    console.debug('🔍 READONLY DEBUG - Final config being passed to useCreateBlockNote:', {
+        processedEditorConfig,
+        readonly,
+        isReadonly
+    });
+    console.debug('🔍 FINAL DEBUG - Config passed to useCreateBlockNote:', {
+        ...processedEditorConfig,
+        uploadFile: processedEditorConfig.uploadFile || uploadFile,
+        isEditableOverride: processedEditorConfig.isEditable === undefined ? { isEditable: !isReadonly } : 'using processedEditorConfig.isEditable'
+    });
+
     const editor = useCreateBlockNote({
         initialContent: initialContent || undefined,
-        ...editorConfig,
-        uploadFile: editorConfig.uploadFile || uploadFile,
-        ...(editorConfig.isEditable === undefined && { isEditable: !isReadonly }),
+        ...processedEditorConfig,
+        uploadFile: processedEditorConfig.uploadFile || uploadFile,
+        isEditable: false,
     });
 
     // Effect to watch for data-readonly changes
@@ -101,7 +161,7 @@ export function BlockNoteEditor({
             mutations.forEach(function(mutation) {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'data-readonly') {
                     const newReadonlyValue = container.getAttribute('data-readonly') === "true";
-                    console.log(`Readonly state changed for ${editorId}:`, newReadonlyValue);
+                    console.debug(`Readonly state changed for ${editorId}:`, newReadonlyValue);
                     setIsReadonly(newReadonlyValue);
                     if (editor) {
                         editor.isEditable = !newReadonlyValue;
@@ -127,7 +187,7 @@ export function BlockNoteEditor({
             if (previousDocument) {
                 const removedUrls = findRemovedImages(previousDocument, content);
                 if (removedUrls.length > 0) {
-                    console.log('🗑️ Detected removed images, sending for cleanup:', removedUrls);
+                    console.debug('🗑️ Detected removed images, sending for cleanup:', removedUrls);
                     removeImages(removedUrls).catch(function(error) {
                         console.error('❌ Failed to remove images:', error);
                     });
@@ -180,7 +240,7 @@ export function BlockNoteEditor({
     }, [currentContent, onChange]);
 
     // Use editorConfig.isEditable if available, otherwise fall back to !readonly
-    const isEditable = editorConfig.isEditable !== undefined ? editorConfig.isEditable : !readonly;
+    const isEditable = processedEditorConfig.isEditable !== undefined ? processedEditorConfig.isEditable : !readonly;
 
     // Create the base BlockNoteView props
     const blockNoteViewProps = {
