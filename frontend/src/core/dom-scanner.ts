@@ -1,5 +1,10 @@
 // core/dom-scanner.ts
-import type { EditorConfig, UploadConfig, RemovalConfig, SlashMenuConfig } from '../types';
+import type {
+    EditorConfig,
+    UploadConfig,
+    RemovalConfig,
+    SlashMenuConfig
+} from '../types';
 
 // Define DocumentTemplate interface locally if not in main types
 interface DocumentTemplate {
@@ -53,7 +58,25 @@ export function scanForWidgets(
                 console.warn(`⚠️ Invalid editor config for ${editorId}:`, e);
             }
         }
+        if (editorConfigScript) {
+            try {
+                editorConfig = JSON.parse(editorConfigScript.textContent || '{}');
+                console.log(`📋 Editor config loaded for ${editorId}:`, editorConfig);
 
+                // 🔍 DEBUG: Specifically check for placeholder
+                console.log(`🔍 PLACEHOLDER DEBUG - Raw script content:`, editorConfigScript.textContent);
+                console.log(`🔍 PLACEHOLDER DEBUG - Parsed editorConfig:`, editorConfig);
+                console.log(`🔍 PLACEHOLDER DEBUG - editorConfig.placeholder:`, editorConfig.placeholder);
+                console.log(`🔍 PLACEHOLDER DEBUG - Has placeholder property:`, 'placeholder' in editorConfig);
+                console.log(`🔍 PLACEHOLDER DEBUG - typeof placeholder:`, typeof editorConfig.placeholder);
+
+                // Check all keys to see what Django is actually sending
+                console.log(`🔍 PLACEHOLDER DEBUG - All keys in editorConfig:`, Object.keys(editorConfig));
+
+            } catch (e) {
+                console.warn(`⚠️ Invalid editor config for ${editorId}:`, e);
+            }
+        }
         // Get UPLOAD configuration from script tag with ID "_image_upload_config"
         let uploadConfig = {};
         const imageUploadConfigScript = document.getElementById(`${editorId}_image_upload_config`);

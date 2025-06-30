@@ -24,8 +24,10 @@ export type {
 } from './removal';
 
 export type {
+    BlockNoteDictionary,
+    DjangoEditorConfig,
     EditorConfig,
-} from './editor';
+} from './editorConfig';
 
 export type {
     DjangoUploadResponse,
