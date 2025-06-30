@@ -2,6 +2,18 @@
 
 <!--next-version-placeholder-->
 
+## [2025.06.30.1]
+
+### Maintenance
+- Add back/front end machinery for templates (template) [#35](https://github.com/Dunwright-dev/django-blocknote/pull/35)
+
+### Documentation
+- Add quickstart guide (how-to) [#35](https://github.com/Dunwright-dev/django-blocknote/pull/35)
+
+### Bug Fixes
+- Replace readonly context constant (readonly) [#33](https://github.com/Dunwright-dev/django-blocknote/pull/33)
+
+
 ## [2025.06.24.1]
 
 ### Maintenance
