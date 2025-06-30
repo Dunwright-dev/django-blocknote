@@ -1,15 +1,14 @@
 import json
 import uuid
-
 import structlog
 from django import forms
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.urls import NoReverseMatch, reverse
-
 from django_blocknote.assets import get_vite_asset
 
 logger = structlog.get_logger(__name__)
+
 templates = [
     {
         "id": "1",
@@ -158,55 +157,6 @@ templates = [
     },
 ]
 
-"""
-[
-    {
-        "id": "block-1",
-        "type": "heading",
-        "props": {"level": 1},
-        "content": [{"type": "text", "text": "Meeting Title"}]
-    },
-    {
-        "id": "block-2",
-        "type": "paragraph",
-        "content": [{"type": "text", "text": "Date: "}]
-    },
-    {
-        "id": "block-3",
-        "type": "heading",
-        "props": {"level": 2},
-        "content": [{"type": "text", "text": "Attendees"}]
-    },
-    {
-        "id": "block-4",
-        "type": "bulletListItem",
-        "content": [{"type": "text", "text": "Attendee 1"}]
-    },
-    {
-        "id": "block-5",
-        "type": "heading",
-        "props": {"level": 2},
-        "content": [{"type": "text", "text": "Agenda"}]
-    },
-    {
-        "id": "block-6",
-        "type": "bulletListItem",
-        "content": [{"type": "text", "text": "Item 1"}]
-    },
-    {
-        "id": "block-7",
-        "type": "heading",
-        "props": {"level": 2},
-        "content": [{"type": "text", "text": "Action Items"}]
-    },
-    {
-        "id": "block-8",
-        "type": "checkListItem",
-        "content": [{"type": "text", "text": "Action item 1"}]
-    }
-]
-"""
-
 
 class BlockNoteWidget(forms.Textarea):
     """
@@ -307,15 +257,19 @@ class BlockNoteWidget(forms.Textarea):
         # Get user templates - this replaces the hardcoded templates
         doc_templates = self._get_user_templates()
 
-        # print(f"  🧩 Templates number {len(doc_templates)}\n{doc_templates}")
+        # 🔧 INTERFACE TRANSLATION: Convert Django config to BlockNote format
+        translated_editor_config = self.translate_editor_config_to_blocknote(
+            self.editor_config.copy() if self.editor_config else {}
+        )
+
         # Collect and serialize all config data
         configs = {
-            "editor_config": self.editor_config.copy() if self.editor_config else {},
+            "editor_config": translated_editor_config,  # Now uses translated config
             "image_upload_config": self._get_image_upload_config(),
             "image_removal_config": self._get_image_removal_config(),
             "slash_menu_config": self._get_slash_menu_config(),
             "initial_content": self.format_value(value),
-            "doc_templates": doc_templates,  # Now uses real user templates
+            "doc_templates": doc_templates,
         }
 
         # Add all configs to context as JSON
@@ -327,7 +281,7 @@ class BlockNoteWidget(forms.Textarea):
         context["widget"].update(
             {
                 "editor_id": widget_id,
-            },
+            }
         )
 
         # Add unified context variables for template
@@ -337,33 +291,25 @@ class BlockNoteWidget(forms.Textarea):
 
         # Debug output in development
         if getattr(settings, "DEBUG", False):
-            print(f"\n{'=' * 50}")
-            print(f"    🧩 BlockNote Widget Context: {widget_id}")
-            print(f"{'=' * 50}")
-            for key in configs:
-                json_value = context["widget"][key]
-                display_key = key.replace("_", " ").title()
-                if key == "initial_content":
-                    content_preview = (
-                        json_value[:150] + "..."
-                        if len(json_value) > 100
-                        else json_value
-                    )
-                    print(f"📝 {display_key:.<20} {content_preview}")
-                elif key == "doc_templates":
-                    template_count = (
-                        len(configs[key]) if isinstance(configs[key], list) else 0
-                    )
-                    print(
-                        f"📄 {display_key:.<20} {template_count} templates for  user {configs['doc_templates']} ",  # {self.user.username if self.user else 'None'}",
-                    )
-
-                    # print(
-                    #     f"📄 {display_key:.<20} {template_count} templates for user {self.user.username if self.user else 'None'}",
-                    # )
-                else:
-                    print(f"⚙️  {display_key:.<20} {json_value}")
-            print(f"{'=' * 50}\n")
+            logger.debug(
+                event="blocknote_widget_context",
+                msg=f"BlockNote Widget Context: {widget_id}",
+                data={
+                    "widget_id": widget_id,
+                    "mode": self.mode,
+                    "editor_config": self.editor_config,
+                    "translated_config": translated_editor_config,
+                    "configs": {
+                        k: v
+                        if k not in ["initial_content"]
+                        else (v[:150] + "..." if len(v) > 100 else v)
+                        for k, v in configs.items()
+                    },
+                    "template_count": len(configs["doc_templates"])
+                    if isinstance(configs["doc_templates"], list)
+                    else 0,
+                },
+            )
 
         return context
 
@@ -374,7 +320,6 @@ class BlockNoteWidget(forms.Textarea):
         2. Settings config - fallback
         3. Django URL resolution - only if no explicit URL provided
         """
-
         # Start with global settings
         base_config = getattr(settings, "DJ_BN_IMAGE_UPLOAD_CONFIG", {}).copy()
 
@@ -407,7 +352,6 @@ class BlockNoteWidget(forms.Textarea):
         2. Settings config - fallback
         3. Django URL resolution - only if no explicit URL provided
         """
-
         # Start with global settings
         base_config = getattr(settings, "DJ_BN_IMAGE_REMOVAL_CONFIG", {}).copy()
 
@@ -421,7 +365,7 @@ class BlockNoteWidget(forms.Textarea):
             except NoReverseMatch:
                 logger.exception(
                     event="url_resolution_failed",
-                    msg="No removal URL configured and django_blocknote URLs not included",  # noqa: E501
+                    msg="No removal URL configured and django_blocknote URLs not included",
                     data={"url_name": "django_blocknote:remove_image"},
                 )
 
@@ -438,7 +382,6 @@ class BlockNoteWidget(forms.Textarea):
         Get slash menu configuration based on menu_type from global settings.
         Widget-specific config acts as override only.
         """
-
         # Get all configurations from settings
         all_configs = getattr(settings, "DJ_BN_SLASH_MENU_CONFIGS", {})
 
@@ -469,13 +412,7 @@ class BlockNoteWidget(forms.Textarea):
     def _get_user_templates(self):
         """Get templates for the current user, with fallback to empty list"""
         # Get user from attrs (set by form mixin)
-
-        # User = get_user_model()
-        # user = User.objects.first()
-        # print(f"USER {user}")
-
         user = self.attrs.get("user", None)
-
         if not user or not getattr(user, "is_authenticated", False):
             if settings.DEBUG:
                 return templates
@@ -489,9 +426,107 @@ class BlockNoteWidget(forms.Textarea):
         except Exception as e:
             logger.exception(
                 event="_get_user_templates",
-                msg='"❌ Error loading user templates',
+                msg="Error loading user templates",
                 data={
-                    "error": e,
+                    "error": str(e),
                 },
             )
             return []
+
+    def _deep_merge(self, target, source):
+        """Simple deep merge utility"""
+        result = target.copy()
+        for key, value in source.items():
+            if (
+                key in result
+                and isinstance(result[key], dict)
+                and isinstance(value, dict)
+            ):
+                result[key] = self._deep_merge(result[key], value)
+            else:
+                result[key] = value
+        return result
+
+    def translate_editor_config_to_blocknote(self, django_config):
+        """
+        Interface method: Convert Django config to React-processable overrides
+        React will handle merging with BlockNote defaults
+        """
+        logger.debug(
+            event="translate_editor_config_input",
+            msg="Converting Django config to BlockNote format",
+            data={"input_config": django_config, "widget_mode": self.mode},
+        )
+
+        blocknote_config = django_config.copy()
+
+        # Build dictionary overrides based on what Django provides
+        dictionary_override = {}
+
+        # Handle placeholder
+        if "placeholder" in django_config:
+            logger.debug(
+                event="placeholder_found",
+                msg="Processing placeholder configuration",
+                data={"placeholder": django_config["placeholder"]},
+            )
+
+            dictionary_override["placeholders"] = {
+                "default": django_config["placeholder"],
+                "emptyDocument": django_config["placeholder"],
+            }
+
+            if "heading_placeholder" in django_config:
+                dictionary_override["placeholders"]["heading"] = django_config[
+                    "heading_placeholder"
+                ]
+
+            # Clean up Django-specific keys
+            del blocknote_config["placeholder"]
+            if "heading_placeholder" in blocknote_config:
+                del blocknote_config["heading_placeholder"]
+        else:
+            logger.debug(
+                event="placeholder_not_found",
+                msg="No placeholder found in Django config",
+            )
+
+        # Handle any other Django dictionary customizations
+        if "dictionary" in django_config:
+            logger.debug(
+                event="existing_dictionary_found",
+                msg="Merging existing dictionary configuration",
+                data={"existing_dictionary": django_config["dictionary"]},
+            )
+            dictionary_override = self._deep_merge(
+                dictionary_override, django_config["dictionary"]
+            )
+            del blocknote_config["dictionary"]
+
+        # Always send readonly state to React, even if no other overrides
+        if self.mode == "readonly":
+            blocknote_config["_django_readonly"] = True
+            logger.debug(
+                event="readonly_mode_set", msg="Added readonly flag to configuration"
+            )
+
+        # If we have any overrides, send them to React for processing
+        if dictionary_override:
+            blocknote_config["_django_dictionary_override"] = dictionary_override
+            logger.debug(
+                event="dictionary_override_added",
+                msg="Added dictionary override to configuration",
+                data={"dictionary_override": dictionary_override},
+            )
+        else:
+            logger.debug(
+                event="no_dictionary_override", msg="No dictionary override created"
+            )
+
+        logger.debug(
+            event="translate_editor_config_output",
+            msg="Completed Django config to BlockNote translation",
+            data={"final_blocknote_config": blocknote_config},
+        )
+
+        return blocknote_config
