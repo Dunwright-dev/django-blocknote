@@ -64,7 +64,7 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 
 from django_blocknote.models import DocumentTemplate
-from django_blocknote.mixins import BlockNoteUserViewMixin
+from django_blocknote.views.mixins import BlockNoteViewMixin
 from .forms import DocumentTemplateForm
 
 class TemplateListView(LoginRequiredMixin, ListView):
@@ -80,7 +80,7 @@ class TemplateListView(LoginRequiredMixin, ListView):
             user=self.request.user
         ).order_by('group', 'title')
 
-class TemplateCreateView(LoginRequiredMixin, BlockNoteUserViewMixin, CreateView):
+class TemplateCreateView(LoginRequiredMixin, BlockNoteViewMixin, CreateView):
     """Create a new template"""
     model = DocumentTemplate
     form_class = DocumentTemplateForm
@@ -93,7 +93,7 @@ class TemplateCreateView(LoginRequiredMixin, BlockNoteUserViewMixin, CreateView)
         messages.success(self.request, f"Template '{form.instance.title}' created successfully!")
         return super().form_valid(form)
 
-class TemplateUpdateView(LoginRequiredMixin, BlockNoteUserViewMixin, UpdateView):
+class TemplateUpdateView(LoginRequiredMixin, BlockNoteViewMixin, UpdateView):
     """Edit an existing template"""
     model = DocumentTemplate
     form_class = DocumentTemplateForm
@@ -392,7 +392,7 @@ graph TD
     C --> D[Display templates]
     
     E[User clicks Create] --> F[TemplateCreateView]
-    F --> G[BlockNoteUserViewMixin injects user]
+    F --> G[BlockNoteViewMixin injects user]
     G --> H[DocumentTemplateForm]
     H --> I[clean_aliases converts CSV to JSON]
     I --> J[Save template with user]
@@ -417,7 +417,7 @@ graph TD
 
 ## What Happens Behind the Scenes
 
-1. **Form Processing**: The `BlockNoteUserViewMixin` automatically injects the current user into forms
+1. **Form Processing**: The `BlockNoteViewMixin` automatically injects the current user into forms
 2. **Alias Conversion**: The `clean_aliases()` method converts CSV input to JSON strings for efficient storage
 3. **Cache Management**: Django BlockNote automatically refreshes the user's template cache when templates are saved or deleted
 4. **Security**: Views automatically filter templates by the current user to prevent unauthorized access

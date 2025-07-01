@@ -168,14 +168,14 @@ Use the view mixin to automatically pass user context:
 
 ```python
 from django.views.generic import CreateView, UpdateView
-from django_blocknote.mixins import BlockNoteUserViewMixin
+from django_blocknote.views.mixins import BlockNoteViewMixin
 
-class BlogPostCreateView(BlockNoteUserViewMixin, CreateView):
+class BlogPostCreateView(BlockNoteViewMixin, CreateView):
     model = BlogPost
     form_class = BlogPostForm
     template_name = 'blog/create_post.html'
 
-class BlogPostUpdateView(BlockNoteUserViewMixin, UpdateView):
+class BlogPostUpdateView(BlockNoteViewMixin, UpdateView):
     model = BlogPost
     form_class = BlogPostForm
     template_name = 'blog/update_post.html'
@@ -189,7 +189,7 @@ graph TD
     B --> C[BlockNoteWidget]
     C --> D[Frontend Editor]
     
-    E[User Request] --> F[View with BlockNoteUserViewMixin]
+    E[User Request] --> F[View with BlockNoteViewMixin]
     F --> G[Form with BlockNoteModelFormMixin]
     G --> C
     
@@ -305,7 +305,7 @@ def create_blog_post(request):
 ### Common Issues
 
 1. **Widget not rendering properly**
-   - Ensure you're using `BlockNoteUserViewMixin` in your views
+   - Ensure you're using `BlockNoteViewMixin` in your views
    - Verify that `BlockNoteModelFormMixin` is used in your forms
 
 2. **Image uploads failing**

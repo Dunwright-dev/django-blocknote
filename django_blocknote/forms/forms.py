@@ -1,11 +1,11 @@
-# forms.py
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
+from django_blocknote.models import DocumentTemplate
+from django_blocknote.widgets import BlockNoteWidget
+
 from .mixins import BlockNoteModelFormMixin
-from .models import DocumentTemplate
-from .widgets import BlockNoteWidget
 
 
 class DocumentTemplateForm(BlockNoteModelFormMixin):

@@ -7,7 +7,7 @@ from django.core.cache import cache
 from django.db import models
 from django.utils.translation import pgettext_lazy as _
 
-from django_blocknote.fields import BlockNoteField
+from .fields import BlockNoteField
 
 User = get_user_model()
 

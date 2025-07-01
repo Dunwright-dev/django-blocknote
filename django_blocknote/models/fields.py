@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
-from .widgets import BlockNoteWidget
+from django_blocknote.widgets import BlockNoteWidget
 
 
 class BlockNoteField(models.JSONField):

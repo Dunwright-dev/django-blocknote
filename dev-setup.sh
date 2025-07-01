@@ -474,7 +474,7 @@ cat > blog/views.py << 'VIEWS_EOF'
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.views.generic import CreateView, UpdateView
-from django_blocknote.mixins import BlockNoteUserViewMixin
+from django_blocknote.views.mixins import BlockNoteViewMixin
 from .models import BlogPost, Comment
 from .forms import BlogPostForm, CommentForm, UploadTestForm
 
