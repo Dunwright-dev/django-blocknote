@@ -6,7 +6,7 @@ from django_blocknote.models import (
     UnusedImageURLS,
     # DocumentTemplate,
 )
-from .fields import BlockNoteField
+from django_blocknote.models.fields import BlockNoteField
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth import get_user_model
 from django_blocknote.models import DocumentTemplate

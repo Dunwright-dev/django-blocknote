@@ -2,13 +2,12 @@
 
 import django.core.serializers.json
 import django.db.models.deletion
-import django_blocknote.fields
+import django_blocknote.models.fields
 from django.conf import settings
 from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("django_blocknote", "0002_alter_unusedimageurls_image_url"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
@@ -97,7 +96,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "content",
-                    django_blocknote.fields.BlockNoteField(
+                    django_blocknote.models.fields.BlockNoteField(
                         blank=True,
                         default=dict,
                         encoder=django.core.serializers.json.DjangoJSONEncoder,

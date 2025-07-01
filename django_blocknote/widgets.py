@@ -412,6 +412,13 @@ class BlockNoteWidget(forms.Textarea):
     def _get_user_templates(self):
         """Get templates for the current user, with fallback to empty list"""
         # Get user from attrs (set by form mixin)
+        logger.debug(
+            event="blocknote_get_use_template",
+            msg="Checking user exists",
+            date={
+                "user": self.attrs.get("user", "USER NOT FOUND"),
+            },
+        )
         user = self.attrs.get("user", None)
         if not user or not getattr(user, "is_authenticated", False):
             if settings.DEBUG:
@@ -420,7 +427,7 @@ class BlockNoteWidget(forms.Textarea):
 
         try:
             # Import here to avoid circular imports
-            from .models import DocumentTemplate
+            from django_blocknote.models import DocumentTemplate
 
             return DocumentTemplate.get_cached_templates(user)
         except Exception as e:
