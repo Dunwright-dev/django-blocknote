@@ -370,7 +370,7 @@ graph TD
 
 ## Form Mixins
 
-### BlockNoteUserFormMixin
+### BlockNoteFormMixin
 
 Core form mixin that provides automatic BlockNote widget configuration and aliases field processing.
 
@@ -383,9 +383,9 @@ Core form mixin that provides automatic BlockNote widget configuration and alias
 #### Usage
 
 ```python
-from django_blocknote.mixins import BlockNoteUserFormMixin
+from django_blocknote.forms.mixins import BlockNoteFormMixin
 
-class MyTemplateForm(BlockNoteUserFormMixin, forms.ModelForm):
+class MyTemplateForm(BlockNoteFormMixin, forms.ModelForm):
     class Meta:
         model = DocumentTemplate
         fields = ['title', 'aliases', 'content']
@@ -411,7 +411,7 @@ def _configure_blocknote_widgets(self):
 
 **Debug Mode:**
 ```python
-class MyForm(BlockNoteUserFormMixin, forms.ModelForm):
+class MyForm(BlockNoteFormMixin, forms.ModelForm):
     _debug_widget_config = True  # Enable debug output
 ```
 
@@ -453,14 +453,14 @@ except (json.JSONDecodeError, ValueError):
 
 ```python
 # Base mixin with core functionality
-class BlockNoteUserFormMixin:
+class BlockNoteFormMixin:
     # Core widget configuration and aliases processing
 
 # Convenience mixins
-class BlockNoteFormMixin(BlockNoteUserFormMixin, forms.Form):
+class BlockNoteFormMixin(BlockNoteFormMixin, forms.Form):
     # Ready-to-use form base class
 
-class BlockNoteModelFormMixin(BlockNoteUserFormMixin, forms.ModelForm):
+class BlockNoteModelFormMixin(BlockNoteFormMixin, forms.ModelForm):
     # Ready-to-use model form base class
 
 # Formset support
@@ -501,7 +501,8 @@ graph TD
 ```python
 # views.py
 from django.views.generic import CreateView, UpdateView
-from django_blocknote.mixins import BlockNoteUserViewMixin, BlockNoteModelFormMixin
+from django_blocknote.views.mixins import BlockNoteViewMixin 
+from django_blocknote.forms.mixins BlockNoteModelFormMixin
 
 class DocumentTemplateForm(BlockNoteModelFormMixin):
     class Meta:
@@ -667,7 +668,7 @@ LOGGING = {
 **Symptoms:** Form validation errors with aliases field
 
 **Solutions:**
-1. Ensure form inherits from `BlockNoteUserFormMixin`
+1. Ensure form inherits from `BlockNoteFormMixin`
 2. Verify aliases field is `JSONField` in model
 3. Check for custom `clean_aliases()` method conflicts
 

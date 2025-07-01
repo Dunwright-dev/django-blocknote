@@ -69,17 +69,17 @@ Templates are cached per-user to avoid database queries on every page load:
 
 Two mixins handle the flow of user context to BlockNote widgets:
 
-#### BlockNoteUserViewMixin
+#### BlockNoteViewMixin
 ```python
-class MyCreateView(BlockNoteUserViewMixin, CreateView):
+class MyCreateView(BlockNoteViewMixin, CreateView):
     model = BlogPost
     form_class = BlogPostForm
     # User automatically passed to form
 ```
 
-#### BlockNoteUserFormMixin
+#### BlockNoteFormMixin
 ```python
-class BlogPostForm(BlockNoteUserFormMixin):
+class BlogPostForm(BlockNoteFormMixin):
     class Meta:
         model = BlogPost
         fields = ['content']
@@ -127,9 +127,9 @@ class BlogPostForm(BlockNoteModelFormMixin):
         fields = ['title', 'content']
 
 # views.py  
-from django_blocknote.mixins import BlockNoteUserViewMixin
+from django_blocknote.views.mixins import BlockNoteViewMixin
 
-class BlogPostCreateView(BlockNoteUserViewMixin, CreateView):
+class BlogPostCreateView(BlockNoteViewMixin, CreateView):
     model = BlogPost
     form_class = BlogPostForm
 ```
