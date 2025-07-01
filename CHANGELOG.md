@@ -2,6 +2,15 @@
 
 <!--next-version-placeholder-->
 
+## [2025.07.01.1]
+
+### Maintenance
+- Update import paths (example) [#37](https://github.com/Dunwright-dev/django-blocknote/pull/37)
+
+### Documentation
+- Add/update for breaking changes (quickstart) [#37](https://github.com/Dunwright-dev/django-blocknote/pull/37)
+
+
 ## [2025.06.30.1]
 
 ### Maintenance
