@@ -249,7 +249,7 @@ class DocumentTemplate(models.Model):
             "BlockNote template blocks",
         ),
         editor_config={
-            "placeholder": "Write your plan here...",
+            "placeholder": "Add your document template here ...",
             "animations": True,
         },
         image_upload_config={
