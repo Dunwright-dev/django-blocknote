@@ -69,7 +69,7 @@ Homepage = "https://github.com/Dunwright-dev/django-blocknote"
 Documentation = "https://django-blocknote.readthedocs.io/"
 Repository = "https://github.com/Dunwright-dev/django-blocknote"
 Issues = "https://github.com/yourusername/django-blocknote/issues"
-Changelog= "https://github.com/Dunwright-dev/django-blocknote/blob/main/CHANGELOG.rst"
+Changelog= "https://github.com/Dunwright-dev/django-blocknote/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 include = ["django_blocknote*"]
