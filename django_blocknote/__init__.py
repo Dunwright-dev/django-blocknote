@@ -1,2 +1,2 @@
 # django_blocknote/__init__.py
-__version__ = "2025.07.01.1"
+__version__ = "2025.07.02.1"
