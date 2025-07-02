@@ -2,6 +2,15 @@
 
 <!--next-version-placeholder-->
 
+## [2025.07.02.1]
+
+### Maintenance
+- Update doc template place holder (model) [#40](https://github.com/Dunwright-dev/django-blocknote/pull/40)
+
+### Bug Fixes
+- Typo in pyproject link (changelog) [#39](https://github.com/Dunwright-dev/django-blocknote/pull/39)
+
+
 ## [2025.07.01.1]
 
 ### Maintenance
