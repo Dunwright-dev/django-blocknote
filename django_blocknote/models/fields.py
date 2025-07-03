@@ -17,6 +17,7 @@ class BlockNoteField(models.JSONField):
         image_upload_config: dict[str, Any] | None = None,
         image_removal_config: dict[str, Any] | None = None,
         menu_type: str = "",
+        template_max_blocks: int | None = None,
         *args,
         **kwargs,
     ):
@@ -25,6 +26,7 @@ class BlockNoteField(models.JSONField):
         self.image_upload_config = image_upload_config or {}
         self.image_removal_config = image_removal_config or {}
         self.menu_type = menu_type or ""
+        self.template_max_blocks = template_max_blocks
 
         # TODO: Update names and check still required.
         blocknote_settings = getattr(settings, "DJANGO_BLOCKNOTE", {})
@@ -43,6 +45,7 @@ class BlockNoteField(models.JSONField):
             image_upload_config=self.image_upload_config,
             image_removal_config=self.image_removal_config,
             menu_type=self.menu_type,
+            template_max_blocks=self.template_max_blocks,
         )
         return super().formfield(**kwargs)
 
