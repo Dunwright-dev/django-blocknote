@@ -36,7 +36,7 @@ django-blocknote: A Powerful and Versatile Rich Text Editor for Your Django Proj
 
 |
 
-See the Quickstart: `here <https://django-blocknote.readthedocs.io/en/latest/how-to/quickstart.html>`__
+See the Quickstart: `here <https://django-blocknote.readthedocs.io/en/latest/how-to-guides/quickstart.html>`__
 
 |
 
