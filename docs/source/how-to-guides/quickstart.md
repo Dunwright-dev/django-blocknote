@@ -46,7 +46,7 @@ python manage.py migrate
 ### Import the Field
 
 ```python
-from django_blocknote.fields import BlockNoteField
+from django_blocknote.models.fields import BlockNoteField
 ```
 
 ### Add to Your Model
@@ -55,7 +55,7 @@ Here's a simple example for a blog post model:
 
 ```python
 from django.db import models
-from django_blocknote.fields import BlockNoteField
+from django_blocknote.models.fields import BlockNoteField
 
 class BlogPost(models.Model):
     title = models.CharField(max_length=200)

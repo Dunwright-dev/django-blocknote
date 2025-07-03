@@ -44,6 +44,7 @@ docs = [
     "sphinx",
     "sphinx-copybutton",
     "sphinx-inline-tabs",
+    "sphinxcontrib-mermaid",
 ]
 
 dev = [
