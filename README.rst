@@ -113,8 +113,8 @@ Ideal For:
 
 |
 
-.. |Docs| image:: https://readthedocs.org/projects/django-ckeditors/badge/?version=latest
-    :target: https://django-ckeditors.readthedocs.io/en/latest/?badge=latest
+.. |Docs| image:: https://readthedocs.org/projects/django-blocknote/badge/?version=latest
+    :target: https://django-blocknote.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 .. |Django| image:: https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FimAsparky%2Fdjango-ckeditors%2Fmain%2Fpyproject.toml&query=project.dependencies&logo=Django&label=Versions&labelColor=%23092E20
    :target: https://docs.djangoproject.com/en/4.2/
