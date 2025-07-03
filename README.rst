@@ -7,7 +7,7 @@ Django BlockNote |Docs| |Django| |Repo|
 
 |
 
-    **Block Note Integration for Django >= 4.2**
+    **BlockNote Integration for Django >= 4.2**
 
 
 |
