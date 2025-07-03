@@ -1,6 +1,6 @@
 
-Django BlockNote |Docs| |Django| |Repo|
-=======================================
+Django BlockNote |Version| |Downloads| |Docs| |Python| |Django| |Repo|
+======================================================================
 |
 
 **Version = 2025.07.03.3**
@@ -112,13 +112,21 @@ Ideal For:
         * Mention
 
 |
-
+.. |Downloads| .. image:: https://img.shields.io/pypi/dm/django-blocknote?style=flat
+    :target: https://pypi.org/project/django-blocknote/
+    :alt: PyPI - Downloads
+.. |Version| .. image:: https://img.shields.io/pypi/v/django-blocknote
+    :target: https://pypi.org/project/django-blocknote/
+    :alt: PyPI - Version
 .. |Docs| image:: https://readthedocs.org/projects/django-blocknote/badge/?version=latest
     :target: https://django-blocknote.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
-.. |Django| image:: https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FimAsparky%2Fdjango-ckeditors%2Fmain%2Fpyproject.toml&query=project.dependencies&logo=Django&label=Versions&labelColor=%23092E20
-   :target: https://docs.djangoproject.com/en/4.2/
-   :alt: Django Version Badge
+.. |Python| image:: https://img.shields.io/pypi/pyversions/django-blocknote
+    :target: https://www.python.org/
+   :alt: PyPI - Python Version
+.. |Django| .. image:: https://img.shields.io/pypi/frameworkversions/django/django-blocknote
+    :target: https://docs.djangoproject.com/en/4.2/
+    :alt: PyPI - Versions from Framework Classifiers
 .. |Repo| image:: https://www.repostatus.org/badges/latest/wip.svg
    :target: https://www.repostatus.org/#wip
    :alt: Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.
