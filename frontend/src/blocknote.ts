@@ -10,16 +10,18 @@ import {
 } from './core/widget-manager';
 import { checkReady } from './utils/helpers';
 import type {
+    DocumentTemplate,
     EditorConfig,
     UploadConfig,
     RemovalConfig,
     SlashMenuConfig,
+    TemplateConfig,
 } from './types';
 
-console.log('Loading BlockNote 0.31.0 with React 19 (HTMX compatible)...');
-console.log('🚀 BlockNote script started loading');
-console.log('React available at start:', typeof React !== 'undefined');
-console.log('ReactDOM available at start:', typeof ReactDOM !== 'undefined');
+console.debug('Loading BlockNote 0.31.0 with React 19 (HTMX compatible)...');
+console.debug('🚀 BlockNote script started loading');
+console.debug('React available at start:', typeof React !== 'undefined');
+console.debug('ReactDOM available at start:', typeof ReactDOM !== 'undefined');
 
 // TypeScript interfaces
 interface WidgetData {
@@ -28,8 +30,10 @@ interface WidgetData {
     uploadConfig: UploadConfig;
     removalConfig: RemovalConfig;
     slashMenuConfig: SlashMenuConfig;
+    docTemplates: DocumentTemplate[];
     initialContent: unknown;
     readonly: boolean;
+    templateConfig: TemplateConfig;
 }
 
 // HTMX interfaces
@@ -48,8 +52,10 @@ interface DjangoBlockNoteAPI {
         uploadConfig: UploadConfig,
         removalConfig: RemovalConfig,
         slashMenuConfig: SlashMenuConfig,
+        docTemplates: DocumentTemplate[],
         initialContent: unknown,
-        readonly: boolean
+        readonly: boolean,
+        templateConfig: TemplateConfig,
     ) => void;
     blockNoteRoots: Map<string, unknown>;
 }
@@ -72,22 +78,24 @@ function initWidget(
     uploadConfig: UploadConfig,
     removalConfig: RemovalConfig,
     slashMenuConfig: SlashMenuConfig,  // Add slash menu config parameter
+    docTemplates: DocumentTemplate[],
     initialContent: unknown,
-    readonly: boolean
+    readonly: boolean,
+    templateConfig: TemplateConfig,
 ): void {
     if (checkReady()) {
-        console.log('✅ Initializing BlockNote widget immediately:', editorId);
-        initWidgetWithData(editorId, editorConfig, uploadConfig, removalConfig, slashMenuConfig, initialContent, readonly);
+        console.debug('✅ Initializing BlockNote widget immediately:', editorId);
+        initWidgetWithData(editorId, editorConfig, uploadConfig, removalConfig, slashMenuConfig, docTemplates, initialContent, readonly, templateConfig);
     } else {
-        console.log('⏳ Queueing BlockNote widget:', editorId);
-        pendingWidgets.push({ editorId, editorConfig, uploadConfig, removalConfig, slashMenuConfig, initialContent, readonly });
+        console.debug('⏳ Queueing BlockNote widget:', editorId);
+        pendingWidgets.push({ editorId, editorConfig, uploadConfig, removalConfig, slashMenuConfig, docTemplates, initialContent, readonly, templateConfig });
     }
 }
 
 // Process all pending widgets
 function processPending(): void {
     if (checkReady() && pendingWidgets.length > 0) {
-        console.log('🚀 Processing', pendingWidgets.length, 'pending widgets');
+        console.debug('🚀 Processing', pendingWidgets.length, 'pending widgets');
         pendingWidgets.forEach((widget: WidgetData) => {
             initWidgetWithData(
                 widget.editorId,
@@ -95,8 +103,10 @@ function processPending(): void {
                 widget.uploadConfig,
                 widget.removalConfig,
                 widget.slashMenuConfig,  // Add slash menu config to processing
+                widget.docTemplates,
                 widget.initialContent,
                 widget.readonly,
+                widget.templateConfig,
             );
         });
         pendingWidgets = [];
@@ -128,7 +138,7 @@ if (document.readyState === 'loading') {
 
 // HTMX integration - scan for new widgets after HTMX swaps content
 document.addEventListener('htmx:afterSwap', function(event: HTMXEvent): void {
-    console.log('🔄 HTMX content swapped, scanning for new BlockNote widgets');
+    console.debug('🔄 HTMX content swapped, scanning for new BlockNote widgets');
     if (event.detail.target) {
         scanForWidgetsWithInit(event.detail.target);
     }
@@ -136,7 +146,7 @@ document.addEventListener('htmx:afterSwap', function(event: HTMXEvent): void {
 
 // Also handle htmx:load for broader compatibility
 document.addEventListener('htmx:load', function(event: HTMXEvent): void {
-    console.log('📥 HTMX content loaded, scanning for BlockNote widgets');
+    console.debug('📥 HTMX content loaded, scanning for BlockNote widgets');
     if (event.detail.elt) {
         scanForWidgetsWithInit(event.detail.elt);
     }
@@ -150,8 +160,8 @@ window.DjangoBlockNote = {
 };
 
 // Debug: Confirm DjangoBlockNote is available
-console.log('✅ DjangoBlockNote namespace created:', typeof window.DjangoBlockNote);
-console.log('Available functions:', Object.keys(window.DjangoBlockNote));
+console.debug('✅ DjangoBlockNote namespace created:', typeof window.DjangoBlockNote);
+console.debug('Available functions:', Object.keys(window.DjangoBlockNote));
 
 // Dispatch a custom event to signal that BlockNote is ready
 document.dispatchEvent(new CustomEvent('blocknote-ready', {
@@ -167,10 +177,10 @@ import ReactDOM from 'react-dom/client';
 if (typeof window !== 'undefined') {
     if (!window.React) {
         (window as any).React = React;
-        console.log('✅ React exposed globally from DjangoBlockNote bundle');
+        console.debug('✅ React exposed globally from DjangoBlockNote bundle');
     }
     if (!window.ReactDOM) {
         (window as any).ReactDOM = ReactDOM;
-        console.log('✅ ReactDOM exposed globally from DjangoBlockNote bundle');
+        console.debug('✅ ReactDOM exposed globally from DjangoBlockNote bundle');
     }
 }

@@ -14,7 +14,11 @@ import type {
     RemovalConfig,
     ImageRemovalConfig,
     SlashMenuConfig,
+    TemplateConfig,
 } from '../types';
+
+import { DEFAULT_TEMPLATE_CONFIG } from '../types';
+
 import {
     processDjangoEditorConfig
 } from '../utils/editorConfig';
@@ -55,8 +59,9 @@ export function BlockNoteEditor({
     uploadConfig = {},
     removalConfig = {},
     slashMenuConfig,
-    templates = [], // Add templates prop
-    debounceDelay = 300, // Add configurable debounce delay
+    templates = [],
+    templateConfig,
+    debounceDelay = 300,
 }: {
     editorId: string;
     initialContent?: any;
@@ -67,6 +72,7 @@ export function BlockNoteEditor({
     removalConfig?: RemovalConfig;
     slashMenuConfig?: SlashMenuConfig;
     templates?: DocumentTemplate[]; // Add templates to props interface
+    templateConfig: TemplateConfig;
     debounceDelay?: number; // New prop for debounce timing
 }) {
     console.debug('Creating BlockNote 0.31.0 editor...');
@@ -257,7 +263,8 @@ export function BlockNoteEditor({
             React.createElement(CustomSlashMenu, {
                 editor,
                 config: slashMenuConfig,
-                templates // Pass templates to CustomSlashMenu
+                templates,
+                templateConfig: templateConfig || DEFAULT_TEMPLATE_CONFIG,
             })
         );
     }
