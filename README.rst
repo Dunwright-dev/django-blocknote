@@ -1,11 +1,13 @@
 Django BlockNote 
 ================
 
-|Repo| |Version| |Downloads| |Docs| |Python| |Django|
+|Repo| |Version| |Python| |Django| |Docs| |Downloads|
 
-**Version = 2025.07.03.3**
+.. role:: hidden
 
-**BlockNote Integration for Django >= 4.2**
+  :hidden: **Version = 2025.07.03.3**
+
+
 
 Licenses
 --------
