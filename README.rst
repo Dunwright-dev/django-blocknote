@@ -1,5 +1,7 @@
-Django BlockNote |Version| |Downloads| |Docs| |Python| |Django| |Repo|
-======================================================================
+Django BlockNote 
+================
+
+|Repo| |Version| |Downloads| |Docs| |Python| |Django|
 
 **Version = 2025.07.03.3**
 
