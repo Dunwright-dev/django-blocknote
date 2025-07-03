@@ -1,4 +1,4 @@
-# How to Set Up Django BlockNote Custom Field
+# Quickstart
 
 ```{admonition} Quickstart
 We are making updates quite quickly so the quickstart
