@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.07.03.3]
+
+### Maintenance
+- Remove commented out code (app) [#46](https://github.com/Dunwright-dev/django-blocknote/pull/46)
+
+
 ## [2025.07.03.2]
 
 ### Maintenance
