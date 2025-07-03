@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## [2025.07.03.1]
+
+### Documentation
+- Add template max size config (template) [#43](https://github.com/Dunwright-dev/django-blocknote/pull/43)
+
+### Bug Fixes
+- Add template config (frontend) [#43](https://github.com/Dunwright-dev/django-blocknote/pull/43)
+- Add template config (template) [#43](https://github.com/Dunwright-dev/django-blocknote/pull/43)
+
+
 ## [2025.07.02.1]
 
 ### Maintenance

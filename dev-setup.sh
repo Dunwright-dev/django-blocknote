@@ -313,7 +313,7 @@ APPS_EOF
 
 cat > blog/models.py << 'MODELS_EOF'
 from django.db import models
-from django_blocknote.fields import BlockNoteField
+from django_blocknote.models.fields import BlockNoteField
 
 class BlogPost(models.Model):
     title = models.CharField(max_length=200)
@@ -417,7 +417,7 @@ TEST_MODELS_EOF
 
 cat > blog/forms.py << 'FORMS_EOF'
 from django import forms
-from django_blocknote.mixins import BlockNoteModelFormMixin, BlockNoteFormMixin
+from django_blocknote.forms.mixins import  BlockNoteFormMixin, BlockNoteModelFormMixin
 from .models import BlogPost, Comment
 
 class BlogPostForm(BlockNoteModelFormMixin):
@@ -504,7 +504,7 @@ def post_detail(request, pk):
     })
 
 # Class-based views using the mixin
-class PostCreateView(BlockNoteUserViewMixin, CreateView):
+class PostCreateView(BlockNoteViewMixin, CreateView):
     model = BlogPost
     form_class = BlogPostForm
     template_name = 'blog/post_form.html'
@@ -521,7 +521,7 @@ class PostCreateView(BlockNoteUserViewMixin, CreateView):
     def get_success_url(self):
         return f'/post/{self.object.pk}/'
 
-class PostUpdateView(BlockNoteUserViewMixin, UpdateView):
+class PostUpdateView(BlockNoteViewMixin, UpdateView):
     model = BlogPost
     form_class = BlogPostForm
     template_name = 'blog/post_form.html'

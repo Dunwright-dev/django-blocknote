@@ -273,7 +273,7 @@ APPS_EOF
 
 cat > blog/models.py << 'MODELS_EOF'
 from django.db import models
-from django_blocknote.fields import BlockNoteField
+from django_blocknote.models.fields import BlockNoteField
 
 class BlogPost(models.Model):
     title = models.CharField(max_length=200)

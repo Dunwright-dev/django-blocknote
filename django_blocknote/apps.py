@@ -16,6 +16,11 @@ class DjangoBlockNoteConfig(AppConfig):
 
         import django_blocknote.signals  # noqa: F401
 
+        if not hasattr(settings, "DJ_BN_TEMPLATE_CONFIG"):
+            settings.DJ_BN_TEMPLATE_CONFIG = {
+                "maxBlocks": 1000,  # Default for fields without explicit limits
+            }
+
         if not hasattr(settings, "DJ_BN_VIEWER_CONFIG"):
             # Minimal config
             settings.DJ_BN_VIEWER_CONFIG = {

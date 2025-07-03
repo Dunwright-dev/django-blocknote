@@ -1,10 +1,12 @@
 import json
 import uuid
+
 import structlog
 from django import forms
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.urls import NoReverseMatch, reverse
+
 from django_blocknote.assets import get_vite_asset
 
 logger = structlog.get_logger(__name__)
@@ -183,6 +185,7 @@ class BlockNoteWidget(forms.Textarea):
         image_removal_config=None,
         menu_type="default",
         mode="edit",
+        template_max_blocks=None,
     ):
         # Set default CSS class
         default_attrs = {"class": "django-blocknote-editor"}
@@ -196,6 +199,7 @@ class BlockNoteWidget(forms.Textarea):
         self.image_removal_config = image_removal_config or {}
         self.menu_type = menu_type
         self.mode = mode
+        self.template_max_blocks = template_max_blocks
 
     @property
     def media(self):
@@ -254,9 +258,6 @@ class BlockNoteWidget(forms.Textarea):
             except (TypeError, ValueError):
                 return fallback
 
-        # Get user templates - this replaces the hardcoded templates
-        doc_templates = self._get_user_templates()
-
         # 🔧 INTERFACE TRANSLATION: Convert Django config to BlockNote format
         translated_editor_config = self.translate_editor_config_to_blocknote(
             self.editor_config.copy() if self.editor_config else {}
@@ -268,8 +269,9 @@ class BlockNoteWidget(forms.Textarea):
             "image_upload_config": self._get_image_upload_config(),
             "image_removal_config": self._get_image_removal_config(),
             "slash_menu_config": self._get_slash_menu_config(),
+            "template_config": self._get_template_config(),
             "initial_content": self.format_value(value),
-            "doc_templates": doc_templates,
+            "doc_templates": self._get_user_templates(),
         }
 
         # Add all configs to context as JSON
@@ -439,6 +441,35 @@ class BlockNoteWidget(forms.Textarea):
                 },
             )
             return []
+
+    def _get_template_config(self):
+        """
+        Get template configuration with proper precedence:
+        1. Widget config (from __init__) - highest priority
+        2. Settings config - fallback
+        3. Hard defaults - final fallback
+        """
+        # Start with global settings
+        base_config = getattr(settings, "DJ_BN_TEMPLATE_CONFIG", {}).copy()
+
+        # Apply widget-specific overrides (highest priority)
+        if self.template_max_blocks is not None:
+            base_config["maxBlocks"] = self.template_max_blocks
+
+        # Set defaults if nothing configured
+        if "maxBlocks" not in base_config:
+            base_config["maxBlocks"] = 1000
+
+        # Always use our optimized chunk size (not configurable)
+        base_config["chunkSize"] = 200  # Fixed implementation detail
+
+        logger.debug(
+            event="get_template_config",
+            msg="Using template config with widget overrides",
+            data={"config": base_config},
+        )
+
+        return base_config
 
     def _deep_merge(self, target, source):
         """Simple deep merge utility"""

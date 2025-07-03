@@ -6,9 +6,10 @@ import type {
     UploadConfig,
     RemovalConfig,
     SlashMenuConfig,
+    TemplateConfig,
 } from '../types';
 
-// Define DocumentTemplate interface
+// TODO: This in types, using that causes readonly to flicker
 interface DocumentTemplate {
     id: string;
     title: string;
@@ -30,12 +31,14 @@ export function initWidgetWithData(
     slashMenuConfig: SlashMenuConfig,
     docTemplates: DocumentTemplate[], // Add templates parameter
     initialContent: unknown = null,
-    readonly: boolean = false
+    readonly: boolean = false,
+    templateConfig: TemplateConfig,
 ): void {
-    console.log('Initializing BlockNote widget:', editorId);
-    console.log('🎯 Slash menu config for', editorId, ':', slashMenuConfig);
-    console.log('📄 Templates for', editorId, ':', docTemplates?.length || 0); // Debug templates
-
+    console.debug('****************************************************************')
+    console.debug('Initializing BlockNote widget:', editorId);
+    console.debug('🎯 Slash menu config for', editorId, ':', slashMenuConfig);
+    console.debug('📄 Templates for', editorId, ':', docTemplates?.length || 0); // Debug templates
+    console.debug(`🔧 Widget Manager - received templateConfig for ${editorId}:`, templateConfig);
     const container = document.getElementById(editorId + '_editor');
     const textarea = document.getElementById(editorId);
 
@@ -46,7 +49,7 @@ export function initWidgetWithData(
 
     // Cleanup existing React root if it exists
     if (blockNoteRoots.has(editorId)) {
-        console.log('Cleaning up existing React root for:', editorId);
+        console.debug('Cleaning up existing React root for:', editorId);
         try {
             blockNoteRoots.get(editorId).unmount();
         } catch (e) {
@@ -77,7 +80,7 @@ export function initWidgetWithData(
     const textareaElement = textarea as HTMLTextAreaElement;
     try {
         textareaElement.value = textareaInitialValue;
-        console.log(`🔧 Initialized textarea for ${editorId} with valid JSON:`, textareaInitialValue);
+        console.debug(`🔧 Initialized textarea for ${editorId} with valid JSON:`, textareaInitialValue);
     } catch (error) {
         console.error(`❌ Failed to initialize textarea JSON for ${editorId}:`, error);
         textareaElement.value = '[]';
@@ -99,7 +102,7 @@ export function initWidgetWithData(
                 })
                 .join('\n');
         } catch (e) {
-            console.log('Could not extract fallback text');
+            console.debug('Could not extract fallback text');
         }
     }
 
@@ -110,7 +113,7 @@ export function initWidgetWithData(
             textareaElement.value = jsonContent;
             textareaElement.dispatchEvent(new Event('change', { bubbles: true }));
             textareaElement.dispatchEvent(new Event('input', { bubbles: true }));
-            console.log(`📝 Updated textarea for ${editorId}`);
+            console.debug(`📝 Updated textarea for ${editorId}`);
         } catch (error) {
             console.error(`❌ Error updating textarea for ${editorId}:`, error);
             textareaElement.value = '[]';
@@ -118,6 +121,7 @@ export function initWidgetWithData(
         }
     };
 
+    console.debug(`🔧 Widget Manager - passing templateConfig to editor:`, templateConfig);
     try {
         const element = React.createElement(BlockNoteEditor, {
             editorId: editorId,
@@ -129,15 +133,17 @@ export function initWidgetWithData(
             templates: docTemplates, // Pass templates to BlockNoteEditor
             onChange: handleChange,
             readonly: readonly,
+            templateConfig,
+            debounceDelay: 300
         });
 
         const root = createRoot(container);
         root.render(element);
         blockNoteRoots.set(editorId, root);
 
-        console.log('✅ BlockNote widget rendered successfully:', editorId);
-        console.log(`   ⚡ Custom slash menu: ${slashMenuConfig?.enabled ? 'ENABLED' : 'DISABLED'}`);
-        console.log(`   📄 Templates loaded: ${docTemplates?.length || 0}`);
+        console.debug('✅ BlockNote widget rendered successfully:', editorId);
+        console.debug(`   ⚡ Custom slash menu: ${slashMenuConfig?.enabled ? 'ENABLED' : 'DISABLED'}`);
+        console.debug(`   📄 Templates loaded: ${docTemplates?.length || 0}`);
 
     } catch (error) {
         console.error('Critical widget initialization error:', error);

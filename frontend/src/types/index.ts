@@ -1,3 +1,4 @@
+import { type } from 'os';
 
 // Re-export all types from individual files
 export type {
@@ -45,6 +46,14 @@ export type {
 export type {
     DocumentTemplate,
 } from './document_template';
+
+export type {
+    TemplateConfig,
+} from './templateConfig';
+
+export {
+    DEFAULT_TEMPLATE_CONFIG,
+} from './templateConfig';
 
 
 

@@ -3,10 +3,14 @@ import type {
     EditorConfig,
     UploadConfig,
     RemovalConfig,
-    SlashMenuConfig
+    SlashMenuConfig,
+    TemplateConfig,
 } from '../types';
 
+import { DEFAULT_TEMPLATE_CONFIG } from '../types';
+
 // Define DocumentTemplate interface locally if not in main types
+// TODO: This in types, using that causes readonly to flicker
 interface DocumentTemplate {
     id: string;
     title: string;
@@ -25,16 +29,16 @@ export function scanForWidgets(
         uploadConfig: UploadConfig,
         removalConfig: RemovalConfig,
         slashMenuConfig: SlashMenuConfig,
-        docTemplates: DocumentTemplate[], // Add templates parameter
+        docTemplates: DocumentTemplate[],
         initialContent: unknown,
-        readonly: boolean
+        readonly: boolean,
+        templateConfig: TemplateConfig,
     ) => void
 ): void {
-    console.log('🔍 Scanning for BlockNote widgets...');
-
+    console.debug('🔍 Scanning for BlockNote widgets...');
     // Find all BlockNote containers
     const containers = rootElement.querySelectorAll('[data-editor-id]');
-    console.log(`Found ${containers.length} potential widget containers`);
+    console.debug(`Found ${containers.length} potential widget containers`);
 
     containers.forEach((container) => {
         const editorId = container.getAttribute('data-editor-id');
@@ -45,7 +49,7 @@ export function scanForWidgets(
             return;
         }
 
-        console.log(`📝 Processing ${isReadonly ? 'viewer' : 'widget'}: ${editorId}`);
+        console.debug(`📝 Processing ${isReadonly ? 'viewer' : 'widget'}: ${editorId}`);
 
         // Get EDITOR configuration from script tag with ID "_editor_config"
         let editorConfig = {};
@@ -53,7 +57,7 @@ export function scanForWidgets(
         if (editorConfigScript) {
             try {
                 editorConfig = JSON.parse(editorConfigScript.textContent || '{}');
-                console.log(`📋 Editor config loaded for ${editorId}:`, editorConfig);
+                console.debug(`📋 Editor config loaded for ${editorId}:`, editorConfig);
             } catch (e) {
                 console.warn(`⚠️ Invalid editor config for ${editorId}:`, e);
             }
@@ -61,31 +65,53 @@ export function scanForWidgets(
         if (editorConfigScript) {
             try {
                 editorConfig = JSON.parse(editorConfigScript.textContent || '{}');
-                console.log(`📋 Editor config loaded for ${editorId}:`, editorConfig);
+                console.debug(`📋 Editor config loaded for ${editorId}:`, editorConfig);
 
                 // 🔍 DEBUG: Specifically check for placeholder
-                console.log(`🔍 PLACEHOLDER DEBUG - Raw script content:`, editorConfigScript.textContent);
-                console.log(`🔍 PLACEHOLDER DEBUG - Parsed editorConfig:`, editorConfig);
-                console.log(`🔍 PLACEHOLDER DEBUG - editorConfig.placeholder:`, editorConfig.placeholder);
-                console.log(`🔍 PLACEHOLDER DEBUG - Has placeholder property:`, 'placeholder' in editorConfig);
-                console.log(`🔍 PLACEHOLDER DEBUG - typeof placeholder:`, typeof editorConfig.placeholder);
+                console.debug(`🔍 PLACEHOLDER DEBUG - Raw script content:`, editorConfigScript.textContent);
+                console.debug(`🔍 PLACEHOLDER DEBUG - Parsed editorConfig:`, editorConfig);
+                console.debug(`🔍 PLACEHOLDER DEBUG - editorConfig.placeholder:`, editorConfig.placeholder);
+                console.debug(`🔍 PLACEHOLDER DEBUG - Has placeholder property:`, 'placeholder' in editorConfig);
+                console.debug(`🔍 PLACEHOLDER DEBUG - typeof placeholder:`, typeof editorConfig.placeholder);
 
                 // Check all keys to see what Django is actually sending
-                console.log(`🔍 PLACEHOLDER DEBUG - All keys in editorConfig:`, Object.keys(editorConfig));
+                console.debug(`🔍 PLACEHOLDER DEBUG - All keys in editorConfig:`, Object.keys(editorConfig));
 
             } catch (e) {
                 console.warn(`⚠️ Invalid editor config for ${editorId}:`, e);
             }
         }
+
+        // Get TEMPLATE loading configuration from script tag with ID "_template_config"
+        let templateConfig: TemplateConfig = { ...DEFAULT_TEMPLATE_CONFIG }; // Start with defaults
+        const templateConfigScript = document.getElementById(`${editorId}_template_config`);
+        // Wherever you call initWidgetCallback, log the templateConfig parameter
+        console.debug(`🔧 Widget Manager - templateConfig being passed:`, templateConfig);
+
+        if (templateConfigScript) {
+            try {
+                const parsed = JSON.parse(templateConfigScript.textContent || '{}');
+                templateConfig = { ...templateConfig, ...parsed }; // merge with defaults
+                console.debug(`⚙️ Template config loaded for ${editorId}:`, templateConfig);
+            } catch (e) {
+                console.warn(`⚠️ Invalid template config for ${editorId}:`, e);
+            }
+        }
+        // In dom-scanner.ts, after parsing templateConfig:
+        console.debug(`⚙️ Template config loaded for ${editorId}:`, templateConfig);
+        console.debug(`🔍 DEBUG - Raw template script content:`, templateConfigScript?.textContent);
+        console.debug(`🔍 DEBUG - Final template config:`, templateConfig);
+        console.debug(`⚙️ DEBUG - maxBlocks: ${templateConfig.maxBlocks}, chunkSize: ${templateConfig.chunkSize}`);
+
         // Get UPLOAD configuration from script tag with ID "_image_upload_config"
         let uploadConfig = {};
         const imageUploadConfigScript = document.getElementById(`${editorId}_image_upload_config`);
-        console.log(`🔍 Looking for upload config script: ${editorId}_image_upload_config`);
-        console.log(`📜 Upload config script element:`, imageUploadConfigScript);
+        console.debug(`🔍 Looking for upload config script: ${editorId}_image_upload_config`);
+        console.debug(`📜 Upload config script element:`, imageUploadConfigScript);
         if (imageUploadConfigScript) {
             try {
                 uploadConfig = JSON.parse(imageUploadConfigScript.textContent || '{}');
-                console.log(`📤 Upload config loaded for ${editorId}:`, uploadConfig);
+                console.debug(`📤 Upload config loaded for ${editorId}:`, uploadConfig);
             } catch (e) {
                 console.warn(`⚠️ Invalid upload config for ${editorId}:`, e);
             }
@@ -95,19 +121,19 @@ export function scanForWidgets(
 
         if (!uploadConfig.uploadUrl) {
             console.error(`❌ Missing uploadUrl for ${editorId} - check Django widget configuration`);
-            console.log(`Upload Config for ${editorId} is`, uploadConfig);
+            console.debug(`Upload Config for ${editorId} is`, uploadConfig);
             return; // Don't initialize broken widget
         }
 
         // Get REMOVAL configuration from script tag with ID "_image_removal_config"
         let removalConfig = {};
         const imageRemovalConfigScript = document.getElementById(`${editorId}_image_removal_config`);
-        console.log(`🔍 Looking for removal config script: ${editorId}_image_removal_config`);
-        console.log(`📜 Removal config script element:`, imageRemovalConfigScript);
+        console.debug(`🔍 Looking for removal config script: ${editorId}_image_removal_config`);
+        console.debug(`📜 Removal config script element:`, imageRemovalConfigScript);
         if (imageRemovalConfigScript) {
             try {
                 removalConfig = JSON.parse(imageRemovalConfigScript.textContent || '{}');
-                console.log(`🗑️ Removal config loaded for ${editorId}:`, removalConfig);
+                console.debug(`🗑️ Removal config loaded for ${editorId}:`, removalConfig);
             } catch (e) {
                 console.warn(`⚠️ Invalid removal config for ${editorId}:`, e);
             }
@@ -117,19 +143,19 @@ export function scanForWidgets(
 
         if (!removalConfig.removalUrl) {
             console.error(`❌ Missing removalUrl for ${editorId} - check Django widget configuration`);
-            console.log(`Removal Config for ${editorId} is`, removalConfig);
+            console.debug(`Removal Config for ${editorId} is`, removalConfig);
             return; // Don't initialize broken widget
         }
 
         // Get SLASH MENU configuration from script tag with ID "_slash_menu_config"
         let slashMenuConfig = {};
         const slashMenuConfigScript = document.getElementById(`${editorId}_slash_menu_config`);
-        console.log(`🔍 Looking for slash menu config script: ${editorId}_slash_menu_config`);
-        console.log(`📜 Slash menu config script element:`, slashMenuConfigScript);
+        console.debug(`🔍 Looking for slash menu config script: ${editorId}_slash_menu_config`);
+        console.debug(`📜 Slash menu config script element:`, slashMenuConfigScript);
         if (slashMenuConfigScript) {
             try {
                 slashMenuConfig = JSON.parse(slashMenuConfigScript.textContent || '{}');
-                console.log(`⚡ Slash menu config loaded for ${editorId}:`, slashMenuConfig);
+                console.debug(`⚡ Slash menu config loaded for ${editorId}:`, slashMenuConfig);
             } catch (e) {
                 console.warn(`⚠️ Invalid slash menu config for ${editorId}:`, e);
             }
@@ -144,13 +170,13 @@ export function scanForWidgets(
         // Get DOCUMENT TEMPLATES from script tag with ID "_doc_templates"
         let docTemplates: DocumentTemplate[] = [];
         const docTemplatesScript = document.getElementById(`${editorId}_doc_templates`);
-        console.log(`🔍 Looking for document templates script: ${editorId}_doc_templates`);
-        console.log(`📜 Document templates script element:`, docTemplatesScript);
+        console.debug(`🔍 Looking for document templates script: ${editorId}_doc_templates`);
+        console.debug(`📜 Document templates script element:`, docTemplatesScript);
         if (docTemplatesScript) {
             try {
                 docTemplates = JSON.parse(docTemplatesScript.textContent || '[]');
-                console.log(`📄 Document templates loaded for ${editorId}:`, docTemplates);
-                console.log(`   Found ${docTemplates.length} templates`);
+                console.debug(`📄 Document templates loaded for ${editorId}:`, docTemplates);
+                console.debug(`   Found ${docTemplates.length} templates`);
             } catch (e) {
                 console.warn(`⚠️ Invalid document templates for ${editorId}:`, e);
                 docTemplates = []; // Fallback to empty array
@@ -165,7 +191,7 @@ export function scanForWidgets(
         if (contentScript) {
             try {
                 content = JSON.parse(contentScript.textContent || '[]');
-                console.log(`📄 Content loaded from script tag for ${editorId}:`, content);
+                console.debug(`📄 Content loaded from script tag for ${editorId}:`, content);
             } catch (e) {
                 console.error(`❌ Failed to parse script tag content for ${editorId}:`, e);
             }
@@ -177,7 +203,7 @@ export function scanForWidgets(
             if (contentAttr) {
                 try {
                     content = JSON.parse(contentAttr);
-                    console.log(`📄 Content loaded from data attribute for ${editorId}:`, content);
+                    console.debug(`📄 Content loaded from data attribute for ${editorId}:`, content);
                 } catch (e) {
                     console.error(`❌ Failed to parse data attribute content for ${editorId}:`, e);
                 }
@@ -185,9 +211,11 @@ export function scanForWidgets(
         }
 
         // Initialize with all configs including templates
-        console.log(`✅ Initializing BlockNote ${isReadonly ? 'viewer' : 'widget'}: ${editorId}`);
-        console.log(`   🎯 Slash menu ${slashMenuConfig.enabled ? 'ENABLED' : 'DISABLED'} for ${editorId}`);
-        console.log(`   📄 Templates: ${docTemplates.length} available for ${editorId}`);
+        console.debug(`✅ Initializing BlockNote ${isReadonly ? 'viewer' : 'widget'}: ${editorId}`);
+        console.debug(`   🎯 Slash menu ${slashMenuConfig.enabled ? 'ENABLED' : 'DISABLED'} for ${editorId}`);
+        console.debug(`   📄 Templates: ${docTemplates.length} available for ${editorId}`);
+        // Add this debug line HERE (after templateConfig is fully parsed):
+        console.debug(`🔧 DOM Scanner - Final templateConfig being passed to callback:`, templateConfig);
 
         initWidgetCallback(
             editorId,
@@ -195,11 +223,12 @@ export function scanForWidgets(
             uploadConfig,
             removalConfig,
             slashMenuConfig,
-            docTemplates,  // Pass templates to callback
+            docTemplates,
             content,
-            isReadonly
+            isReadonly,
+            templateConfig,
         );
     });
 
-    console.log('✅ Widget scanning complete');
+    console.debug('✅ Widget scanning complete');
 }
