@@ -56,59 +56,60 @@ class BlockNoteAdminMixin:
     def __init__(self, model, admin_site):
         super().__init__(model, admin_site)
         # Automatically add preview fields for BlockNote fields
-        self._setup_blocknote_previews()
+        # self._setup_blocknote_previews()
 
-    def _setup_blocknote_previews(self):
-        """Automatically create preview methods for BlockNote fields"""
-        blocknote_fields = []
-        for field in self.model._meta.get_fields():
-            if isinstance(field, BlockNoteField):
-                blocknote_fields.append(field.name)
-                preview_method_name = f"{field.name}_preview"
-
-                # Create dynamic preview method
-                def make_preview_method(field_name):
-                    def preview_method(self, obj):
-                        # Handle case where obj is None (during creation)
-                        if obj is None or obj.pk is None:
-                            return format_html(
-                                '<em style="color: #999;">Save to see preview</em>',
-                            )
-
-                        content = getattr(obj, field_name)
-                        if content:
-                            try:
-                                template = Template(
-                                    "{% load blocknote_tags %}{% blocknote_viewer content %}",
-                                )
-                                return format_html(
-                                    template.render(Context({"content": content})),
-                                )
-                            except Exception as e:
-                                return format_html(
-                                    '<em style="color: #d32f2f;">Preview error: {}</em>',
-                                    str(e),
-                                )
-                        return format_html('<em style="color: #999;">No content</em>')
-
-                    preview_method.short_description = (
-                        f"{field.verbose_name or field_name.title()} Preview"
-                    )
-                    preview_method.allow_tags = True
-                    return preview_method
-
-                # Add method to class
-                setattr(
-                    self.__class__,
-                    preview_method_name,
-                    make_preview_method(field.name),
-                )
-
-        # Add preview fields to readonly_fields if they exist
-        if blocknote_fields:
-            existing_readonly = list(getattr(self, "readonly_fields", []))
-            preview_fields = [f"{field}_preview" for field in blocknote_fields]
-            self.readonly_fields = existing_readonly + preview_fields
+    # TODO: Delete this, left just in case for a bit
+    # def _setup_blocknote_previews(self):
+    #     """Automatically create preview methods for BlockNote fields"""
+    #     blocknote_fields = []
+    #     for field in self.model._meta.get_fields():
+    #         if isinstance(field, BlockNoteField):
+    #             blocknote_fields.append(field.name)
+    #             preview_method_name = f"{field.name}_preview"
+    #
+    #             # Create dynamic preview method
+    #             def make_preview_method(field_name):
+    #                 def preview_method(self, obj):
+    #                     # Handle case where obj is None (during creation)
+    #                     if obj is None or obj.pk is None:
+    #                         return format_html(
+    #                             '<em style="color: #999;">Save to see preview</em>',
+    #                         )
+    #
+    #                     content = getattr(obj, field_name)
+    #                     if content:
+    #                         try:
+    #                             template = Template(
+    #                                 "{% load blocknote_tags %}{% blocknote_viewer content %}",
+    #                             )
+    #                             return format_html(
+    #                                 template.render(Context({"content": content})),
+    #                             )
+    #                         except Exception as e:
+    #                             return format_html(
+    #                                 '<em style="color: #d32f2f;">Preview error: {}</em>',
+    #                                 str(e),
+    #                             )
+    #                     return format_html('<em style="color: #999;">No content</em>')
+    #
+    #                 preview_method.short_description = (
+    #                     f"{field.verbose_name or field_name.title()} Preview"
+    #                 )
+    #                 preview_method.allow_tags = True
+    #                 return preview_method
+    #
+    #             # Add method to class
+    #             setattr(
+    #                 self.__class__,
+    #                 preview_method_name,
+    #                 make_preview_method(field.name),
+    #             )
+    #
+    #     # Add preview fields to readonly_fields if they exist
+    #     if blocknote_fields:
+    #         existing_readonly = list(getattr(self, "readonly_fields", []))
+    #         preview_fields = [f"{field}_preview" for field in blocknote_fields]
+    #         self.readonly_fields = existing_readonly + preview_fields
 
     def get_readonly_fields(self, request, obj=None):
         """Override to handle preview fields when creating new objects"""
