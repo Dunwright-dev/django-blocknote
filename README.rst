@@ -1,28 +1,16 @@
-
 Django BlockNote |Version| |Downloads| |Docs| |Python| |Django| |Repo|
 ======================================================================
-|
 
 **Version = 2025.07.03.3**
 
-|
-
-    **BlockNote Integration for Django >= 4.2**
-
-
-|
+**BlockNote Integration for Django >= 4.2**
 
 Licenses
 --------
 
-|
+**Django:** BSD 3-Clause "New" or "Revised License"
 
-    **Django:** BSD 3-Clause "New" or "Revised License"
-
-    **BlockNote:** Mozilla Public License Version 2.0
-
-
-|
+**BlockNote:** Mozilla Public License Version 2.0
 
 What is django-blocknote
 ------------------------
@@ -34,99 +22,118 @@ django-blocknote: A Powerful and Versatile Rich Text Editor for Your Django Proj
 * Includes features like text formatting, image uploads, tables, code blocks, and more.
 * Highly customizable to fit your project's exact needs.
 
-|
-
 See the Quickstart: `here <https://django-blocknote.readthedocs.io/en/latest/how-to-guides/quickstart.html>`__
 
-|
-
 Ideal For:
+~~~~~~~~~~
 
-    * Blogs
-    * Content Management Systems (CMS)
-    * Websites requiring advanced text editing features
+* Blogs
+* Content Management Systems (CMS)
+* Websites requiring advanced text editing features
 
 **Includes the following BlockNote features:**
 
-* **Text Formatting**
-    * **Basic:**
-        * Bold
-        * Italic
-        * Underline
-        * Strikethrough
-        * Superscript
-        * Subscript
-        * Code
-    * **Paragraph and Structure:**
-        * BlockQuote
-        * Heading
-        * Paragraph
-        * Alignment
+Text Formatting
+~~~~~~~~~~~~~~~
 
-    * **Lists:**
-        * List
-        * TodoList
-        * ListProperties
+**Basic:**
 
-    * **Advanced:**
-        * Highlight
-        * Indent
-        * IndentBlock
+* Bold
+* Italic
+* Underline
+* Strikethrough
+* Superscript
+* Subscript
+* Code
 
+**Paragraph and Structure:**
 
-* **Images and Media**
-    * **Core:**
-        * Image
-        * ImageCaption
-        * ImageStyle
-        * ImageToolbar
-        * ImageResize
-        * ImageInsert
-        * LinkImage
+* BlockQuote
+* Heading
+* Paragraph
+* Alignment
 
-    * **Upload:**
-        * UploadAdapter
-        * SimpleUploadAdapter
+**Lists:**
 
-    * **Embedding:**
-        * MediaEmbed
-        * HtmlEmbed
+* List
+* TodoList
+* ListProperties
 
-* **Other**
-    * **Link:**
-        * Link
+**Advanced:**
 
-    * **Table:**
-        * Table
-        * TableToolbar
+* Highlight
+* Indent
+* IndentBlock
 
-    * **Style:**
-        * Font
-        * Style
-        * HorizontalLine
+Images and Media
+~~~~~~~~~~~~~~~~
 
-    * **Editing Tools:**
-        * Autoformat
+**Core:**
 
-    * **Word Processing Features**
-        * Mention
+* Image
+* ImageCaption
+* ImageStyle
+* ImageToolbar
+* ImageResize
+* ImageInsert
+* LinkImage
 
-|
-.. |Downloads| .. image:: https://img.shields.io/pypi/dm/django-blocknote?style=flat
+**Upload:**
+
+* UploadAdapter
+* SimpleUploadAdapter
+
+**Embedding:**
+
+* MediaEmbed
+* HtmlEmbed
+
+Other
+~~~~~
+
+**Link:**
+
+* Link
+
+**Table:**
+
+* Table
+* TableToolbar
+
+**Style:**
+
+* Font
+* Style
+* HorizontalLine
+
+**Editing Tools:**
+
+* Autoformat
+
+**Word Processing Features:**
+
+* Mention
+
+.. |Downloads| image:: https://img.shields.io/pypi/dm/django-blocknote?style=flat
     :target: https://pypi.org/project/django-blocknote/
     :alt: PyPI - Downloads
-.. |Version| .. image:: https://img.shields.io/pypi/v/django-blocknote
+
+.. |Version| image:: https://img.shields.io/pypi/v/django-blocknote
     :target: https://pypi.org/project/django-blocknote/
     :alt: PyPI - Version
+
 .. |Docs| image:: https://readthedocs.org/projects/django-blocknote/badge/?version=latest
     :target: https://django-blocknote.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
+
 .. |Python| image:: https://img.shields.io/pypi/pyversions/django-blocknote
     :target: https://www.python.org/
-   :alt: PyPI - Python Version
-.. |Django| .. image:: https://img.shields.io/pypi/frameworkversions/django/django-blocknote
+    :alt: PyPI - Python Version
+
+.. |Django| image:: https://img.shields.io/pypi/frameworkversions/django/django-blocknote
     :target: https://docs.djangoproject.com/en/4.2/
     :alt: PyPI - Versions from Framework Classifiers
+
 .. |Repo| image:: https://www.repostatus.org/badges/latest/wip.svg
-   :target: https://www.repostatus.org/#wip
-   :alt: Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.
+    :target: https://www.repostatus.org/#wip
+    :alt: Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.
