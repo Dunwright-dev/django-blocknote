@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## [2025.07.03.2]
+
+### Maintenance
+- Remove redundant template preview (admin) [#41](https://github.com/Dunwright-dev/django-blocknote/pull/41)
+
+### Documentation
+- Update info (README) [#41](https://github.com/Dunwright-dev/django-blocknote/pull/41)
+- Update to correct readme path (readme) [#41](https://github.com/Dunwright-dev/django-blocknote/pull/41)
+
+
 ## [2025.07.03.1]
 
 ### Documentation
