@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## [2025.07.05.2]
+
+### Maintenance
+- Fix typo in yaml file (git) [#48](https://github.com/Dunwright-dev/django-blocknote/pull/48)
+- Remove version from script, GHA and README (version) [#48](https://github.com/Dunwright-dev/django-blocknote/pull/48)
+
+
 ## [2025.07.05.1]
 
 ### Features
