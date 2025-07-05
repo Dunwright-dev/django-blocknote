@@ -1,4 +1,4 @@
-name: Test and Coverage
+eame: Test and Coverage
 
 on:
   pull_request:
@@ -313,7 +313,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ ! -f CHANGELOG.md ]  || [ ! -f docs/source/conf.py ] || [ ! -f README.rst ] || [ ! -f pyproject.toml ] || [ ! -f django_blocknote/__init__.py ] || [ ! -f version.toml ]; then
+          if [ ! -f CHANGELOG.md ]  || [ ! -f docs/source/conf.py ] || [ ! -f pyproject.toml ] || [ ! -f django_blocknote/__init__.py ] || [ ! -f version.toml ]; then
             echo "status=failure" >> $GITHUB_OUTPUT
             echo "### Changelog Update Failed" >> $GITHUB_STEP_SUMMARY
             echo "Error: Required files not found" >> $GITHUB_STEP_SUMMARY
@@ -325,7 +325,7 @@ jobs:
           SCRIPT_EXIT=$?
           if [ $SCRIPT_EXIT -eq 0 ]; then
             if [ -n "$(git status --porcelain)" ]; then
-                git add CHANGELOG.md docs/source/conf.py pyproject.toml README.rst django_blocknote/__init__.py version.toml
+                git add CHANGELOG.md docs/source/conf.py pyproject.toml django_blocknote/__init__.py version.toml
                 if [ "${{ steps.check_fork.outputs.is_fork }}" = "true" ]; then
                   # For fork PRs, commit without signing
                   git -c user.name="GitHub Actions Bot (dj-bn)" \
