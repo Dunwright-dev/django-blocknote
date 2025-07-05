@@ -3,11 +3,6 @@ Django BlockNote
 
 |Repo| |Version| |Python| |Django| |Docs| |Downloads|
 
-.. role:: hidden
-
-  :hidden: **Version = 2025.07.03.3**
-
-
 
 Licenses
 --------

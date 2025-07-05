@@ -93,7 +93,7 @@ class ChangelogUpdater:
         # Define paths
         self.changelog_path = Path("CHANGELOG.md")
         self.docs_conf_path = Path("docs/source/conf.py")
-        self.readme_path = Path("README.rst")
+        # self.readme_path = Path("README.rst")
         self.project_path = Path("pyproject.toml")
         self.package_path = Path("django_blocknote/__init__.py")
         self.version_path = Path("version.toml")
@@ -320,26 +320,27 @@ class ChangelogUpdater:
             logger.exception("Failed to update pyproject.toml version")
             raise
 
-    def _get_updated_readme(self, version: str) -> str:
-        """\
-        Find and update the README version number.
-
-        Returns:
-            string: Formatted README file string.
-        """
-
-        try:
-            content = self.readme_path.read_text().splitlines()
-            # Find and replace the version line
-            for i, line in enumerate(content):
-                if line.startswith("**Version ="):
-                    content[i] = f"**Version = {version}**"
-                    break
-
-            return "\n".join(content)
-        except Exception:
-            logger.exception("Failed to update README.rst version")
-            raise
+    # def _get_updated_readme(self, version: str) -> str:
+    #     """\
+    #     UNUSED IN THIS REPO
+    #     Find and update the README version number.
+    #
+    #     Returns:
+    #         string: Formatted README file string.
+    #     """
+    #
+    #     try:
+    #         content = self.readme_path.read_text().splitlines()
+    #         # Find and replace the version line
+    #         for i, line in enumerate(content):
+    #             if line.startswith("**Version ="):
+    #                 content[i] = f"**Version = {version}**"
+    #                 break
+    #
+    #         return "\n".join(content)
+    #     except Exception:
+    #         logger.exception("Failed to update README.rst version")
+    #         raise
 
     def update_changelog(self) -> bool:
         """
@@ -404,18 +405,18 @@ class ChangelogUpdater:
                     self._get_updated_docs_conf(version=version),
                 )
                 self.package_path.write_text(
-                    self._get_updated_package(version=version)
+                    self._get_updated_package(version=version),
                 )  # update __init__.py
                 self.project_path.write_text(
-                    self._get_updated_pyproject(version=version)
+                    self._get_updated_pyproject(version=version),
                 )
-                self.readme_path.write_text(self._get_updated_readme(version=version))
+                # self.readme_path.write_text(self._get_updated_readme(version=version))
                 self.version_path.write_text(version_data)
 
                 logger.info(
-                    f"Successfully updated CHANGELOG.md, README.rst, pyproject.toml and version.toml to version {version}"
+                    f"Successfully updated CHANGELOG.md, pyproject.toml and version.toml to version {version}"
                 )
-                return True
+                return (True,)
 
             except Exception:
                 logger.exception("Error updating files:")
