@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.07.05.1]
+
+### Features
+- Add fuzzy find and improve ui (menu) [#49](https://github.com/Dunwright-dev/django-blocknote/pull/49)
+
+
 ## [2025.07.03.3]
 
 ### Maintenance
