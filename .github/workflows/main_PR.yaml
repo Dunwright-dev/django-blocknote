@@ -1,4 +1,4 @@
-eame: Test and Coverage
+name: Test and Coverage
 
 on:
   pull_request:
