@@ -68,7 +68,7 @@ class DjangoBlockNoteConfig(AppConfig):
                         # Advanced features not for general users
                         "code",  # Code blocks
                         "equation",  # Math equations
-                        "table",  # Tables (can be complex)
+                        # "table",  # Tables (can be complex)
                         "embed",  # External embeds
                         "column",  # Layout columns
                         "pageBreak",  # Page breaks
@@ -96,7 +96,7 @@ class DjangoBlockNoteConfig(AppConfig):
                         # Advanced features not for general users
                         "code",  # Code blocks
                         "equation",  # Math equations
-                        "table",  # Tables (can be complex)
+                        # "table",  # Tables (can be complex)
                         "embed",  # External embeds
                         "column",  # Layout columns
                         "pageBreak",  # Page breaks
@@ -149,7 +149,7 @@ class DjangoBlockNoteConfig(AppConfig):
                         "file",
                         "code",
                         "equation",
-                        "table",
+                        # "table",
                         "form",
                         "button",
                         "variable",
