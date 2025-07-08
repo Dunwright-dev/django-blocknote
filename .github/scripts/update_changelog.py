@@ -197,6 +197,8 @@ class ChangelogUpdater:
 
         # Log the commit being processed
         logger.info(f"Processing commit message: {title}")
+        logger.info(f"Title starts with BREAKING: {title.startswith('BREAKING')}")
+        logger.info(f"BREAKING in title: {'BREAKING' in title}")
 
         # Allows for 0-3 spaces after the colon.
         title_pattern = r"^(?:BREAKING\s+)?(?P<type>\w+)\((?P<scope>[\w-]+)\):\s{0,3}(?P<description>.+?)\s+#(?P<pr>\d+)(?:\s+@(?P<author>\S+))?\s*(?:\[(?P<commit_hash>\w+)\])?$"
@@ -205,6 +207,8 @@ class ChangelogUpdater:
         if not title_match:
             logger.info(f"Commit message does not match expected format: {title}")
             return None
+
+        logger.info(f"Regex groups: {title_match.groups()}")
 
         commit_type = title_match.group("type")
         if commit_type not in self.CHANGE_TYPES:
@@ -217,10 +221,14 @@ class ChangelogUpdater:
 
         docs_hint = ""
         if body:
+            logger.info(f"Commit body found: '{body}'")
             docs_pattern = r'\[ui-docs\]:\s*"""(.*?)"""'
             docs_match = re.search(docs_pattern, body, re.DOTALL)
+            logger.info(f"UI docs pattern match: {docs_match is not None}")
             if docs_match:
                 docs_hint = docs_match.group(1).strip()
+            else:
+                logger.info("No UI docs pattern found in body")
 
         return ChangelogEntry(
             type=commit_type,
@@ -367,15 +375,22 @@ class ChangelogUpdater:
         for commit in commits:
             entry = self._parse_commit_message(commit)
             if entry and entry.type in self.CHANGE_TYPES:
+                logger.info(
+                    f"Processing entry: {entry.type}, breaking: {entry.breaking}"
+                )
                 self.changes_made = True
                 formatted_entry = entry.format()
                 if entry.breaking:
+                    logger.info(f"Adding to breaking changes: {formatted_entry}")
                     breaking_changes.append(formatted_entry)
                 grouped_changes[entry.type].append(formatted_entry)
 
         if not self.changes_made:
             logger.info("No changes needed in changelog")
             return False
+
+        logger.info(f"Total breaking changes found: {len(breaking_changes)}")
+        logger.info(f"Breaking changes: {breaking_changes}")
 
         # Build new version section
         new_version = f"\n## [{version}]\n"
