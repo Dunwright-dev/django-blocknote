@@ -1,29 +1,31 @@
-import React from 'react';
+import {
+	useState,
+	useEffect,
+	useMemo,
+	useCallback,
+	useRef,
+	createElement
+} from 'react';
+
 import {
 	getDefaultReactSlashMenuItems,
 	SuggestionMenuController,
 	DefaultReactSuggestionItem
 } from '@blocknote/react';
+
 import {
 	BlockNoteEditor,
-	insertOrUpdateBlock,
 } from '@blocknote/core';
+
 import { getTemplateIcon } from '../utils/template-icons';
+import { advancedFuzzySearch } from '../utils/fuzzy-search';
+import { createTemplateSizeErrorBlocks } from '../utils/template-errors';
+import { MENU_KEYS, MENU_OPTIONS, findMenuOption } from '../config/menu-config';
 import type {
 	SlashMenuConfig,
 	TemplateConfig,
+	DocumentTemplate,
 } from '../types';
-
-// TODO: This in types, using that causes readonly to flicker
-interface DocumentTemplate {
-	id: string;
-	title: string;
-	subtext: string;
-	aliases: string[];
-	group: string;
-	icon: string;
-	content: any[];
-}
 
 interface CustomSlashMenuProps {
 	editor: BlockNoteEditor;
@@ -31,6 +33,12 @@ interface CustomSlashMenuProps {
 	templates?: DocumentTemplate[];
 	templateConfig: TemplateConfig;
 }
+
+// Timing constants
+const DEBOUNCE_FAST = 100;
+const DEBOUNCE_NORMAL = 200;
+const CURSOR_POSITIONING_DELAY = 50;
+const CHUNK_INSERTION_DELAY = 10;
 
 // Menu states with transition support
 const MENU_STATES = {
@@ -41,122 +49,22 @@ const MENU_STATES = {
 
 type MenuState = typeof MENU_STATES[keyof typeof MENU_STATES];
 
-// Enhanced menu configurations with navigation hints
-const MENU_OPTIONS = [
-	{
-		key: 'b',
-		label: 'Blocks',
-		description: 'Add basic content blocks',
-		icon: '🧱',
-		shortcut: 'b'
-	},
-	{
-		key: 't',
-		label: 'Templates',
-		description: 'Insert document templates',
-		icon: '📋',
-		shortcut: 't'
-	},
-	// {
-	// 	key: 'a',
-	// 	label: 'Actions',
-	// 	description: 'AI and custom actions',
-	// 	icon: '⚡',
-	// 	shortcut: 'a'
-	// },
-	// {
-	// 	key: 'm',
-	// 	label: 'Media',
-	// 	description: 'Images, videos, embeds',
-	// 	icon: '🎨',
-	// 	shortcut: 'm'
-	// }
-];
-
-// Navigation helpers
-const NAVIGATION_HINTS = {
-	BACK: '← Back to menu',
-	CONTINUE: 'Continue typing to search...',
-	SELECT: 'Press Enter to select'
-};
-
 // Transition dummy item generator
 const getTransitionDummyItem = (targetMenu: string | null): DefaultReactSuggestionItem => {
-	const menuOption = MENU_OPTIONS.find(opt => opt.key === targetMenu);
-
+	const menuOption = findMenuOption(targetMenu || '');
 	return {
 		title: targetMenu && menuOption ? `Loading ${menuOption.label}...` : 'Loading...',
 		onItemClick: () => { }, // No-op during transition
 		aliases: [],
 		group: 'System',
-		icon: '⏳', // You can change this to '🔄' for spinner effect
+		icon: '⏳', // Optional '🔄' spinner effect
 		subtext: 'Please wait...',
 		content: 'transition-dummy'
 	};
 };
 
-// Enhanced fuzzy search that filters on group, name/title, and aliases
-const advancedFuzzySearch = (items: DefaultReactSuggestionItem[], query: string): DefaultReactSuggestionItem[] => {
-	if (!query.trim()) {
-		return items;
-	}
-
-	const searchQuery = query.toLowerCase().trim();
-	const scoredItems = items.map(item => {
-		let score = 0;
-		const title = item.title.toLowerCase();
-		const group = item.group?.toLowerCase() || '';
-		const subtext = item.subtext?.toLowerCase() || '';
-		const aliases = item.aliases?.map(a => a.toLowerCase()) || [];
-
-		// Exact matches get highest score
-		if (title === searchQuery) score += 100;
-		if (aliases.includes(searchQuery)) score += 90;
-		if (group === searchQuery) score += 80;
-
-		// Prefix matches get high score
-		if (title.startsWith(searchQuery)) score += 70;
-		if (aliases.some(alias => alias.startsWith(searchQuery))) score += 60;
-		if (group.startsWith(searchQuery)) score += 50;
-
-		// Contains matches get medium score
-		if (title.includes(searchQuery)) score += 40;
-		if (aliases.some(alias => alias.includes(searchQuery))) score += 30;
-		if (group.includes(searchQuery)) score += 25;
-		if (subtext.includes(searchQuery)) score += 20;
-
-		// Fuzzy character matching (for typos)
-		const fuzzyScore = calculateFuzzyScore(title, searchQuery);
-		score += fuzzyScore;
-
-		return { item, score };
-	})
-		.filter(({ score }) => score > 0)
-		.sort((a, b) => b.score - a.score)
-		.map(({ item }) => item);
-
-	return scoredItems;
-};
-
-// Simple fuzzy scoring for typo tolerance
-const calculateFuzzyScore = (text: string, query: string): number => {
-	if (text.includes(query)) return 0; // Already handled above
-
-	let score = 0;
-	let queryIndex = 0;
-
-	for (let i = 0; i < text.length && queryIndex < query.length; i++) {
-		if (text[i] === query[queryIndex]) {
-			score += 1;
-			queryIndex++;
-		}
-	}
-
-	// Return score only if we matched most of the query
-	return queryIndex >= query.length * 0.7 ? score : 0;
-};
-
 const insertTemplate = (editor: BlockNoteEditor, templateContent: any[], options: TemplateConfig) => {
+	console.debug('🔧 Template insertion started:', { blocks: templateContent.length });
 	if (templateContent.length === 0) return;
 
 	console.debug('MAX BLOCK OPTION', options.maxBlocks)
@@ -168,114 +76,7 @@ const insertTemplate = (editor: BlockNoteEditor, templateContent: any[], options
 	// Hard limit check - insert error message
 	if (templateContent.length > MAX_BLOCKS) {
 		console.warn(`Template exceeds maximum size of ${MAX_BLOCKS} blocks (${templateContent.length} blocks)`);
-
-		const errorBlocks = [
-			{
-				id: `error-header-${Date.now()}`,
-				type: 'heading',
-				props: {
-					textColor: 'red',
-					backgroundColor: 'default',
-					textAlignment: 'left',
-					level: 2
-				},
-				content: [
-					{
-						type: 'text',
-						text: '⚠️ Template Too Large',
-						styles: {}
-					}
-				],
-				children: []
-			},
-			{
-				id: `error-desc-${Date.now()}`,
-				type: 'paragraph',
-				props: {
-					textColor: 'default',
-					backgroundColor: 'default',
-					textAlignment: 'left'
-				},
-				content: [
-					{
-						type: 'text',
-						text: `This template contains ${templateContent.length} blocks, which exceeds the maximum limit of ${MAX_BLOCKS} blocks.`,
-						styles: {}
-					}
-				],
-				children: []
-			},
-			{
-				id: `error-solutions-header-${Date.now()}`,
-				type: 'heading',
-				props: {
-					textColor: 'default',
-					backgroundColor: 'default',
-					textAlignment: 'left',
-					level: 3
-				},
-				content: [
-					{
-						type: 'text',
-						text: 'Suggested Solutions:',
-						styles: {}
-					}
-				],
-				children: []
-			},
-			{
-				id: `error-solution-1-${Date.now()}`,
-				type: 'bulletListItem',
-				props: {
-					textColor: 'default',
-					backgroundColor: 'default',
-					textAlignment: 'left'
-				},
-				content: [
-					{
-						type: 'text',
-						text: 'Break this template into smaller, more focused templates',
-						styles: {}
-					}
-				],
-				children: []
-			},
-			{
-				id: `error-solution-2-${Date.now()}`,
-				type: 'bulletListItem',
-				props: {
-					textColor: 'default',
-					backgroundColor: 'default',
-					textAlignment: 'left'
-				},
-				content: [
-					{
-						type: 'text',
-						text: 'Remove unnecessary formatting or empty blocks',
-						styles: {}
-					}
-				],
-				children: []
-			},
-			{
-				id: `error-solution-3-${Date.now()}`,
-				type: 'bulletListItem',
-				props: {
-					textColor: 'default',
-					backgroundColor: 'default',
-					textAlignment: 'left'
-				},
-				content: [
-					{
-						type: 'text',
-						text: 'Contact your administrator to increase the template size limit',
-						styles: {}
-					}
-				],
-				children: []
-			}
-		];
-
+		const errorBlocks = createTemplateSizeErrorBlocks(templateContent.length, MAX_BLOCKS);
 		editor.insertBlocks(errorBlocks, editor.getTextCursorPosition().block, "replace");
 		return;
 	}
@@ -284,17 +85,14 @@ const insertTemplate = (editor: BlockNoteEditor, templateContent: any[], options
 	const moveCursorToFirstEditablePosition = () => {
 		try {
 			const document = editor.document;
-
 			// Find the first block where user can type
 			for (let i = 0; i < document.length; i++) {
 				const block = document[i];
-
 				// Look for blocks that are typically editable and empty or have placeholder content
 				if (block.type === 'paragraph' ||
 					block.type === 'heading' ||
 					block.type === 'bulletListItem' ||
 					block.type === 'checkListItem') {
-
 					// Check if block is empty or has placeholder-like content
 					const isEmpty = !block.content || block.content.length === 0;
 					const hasPlaceholderText = block.content && block.content.some(item =>
@@ -321,9 +119,8 @@ const insertTemplate = (editor: BlockNoteEditor, templateContent: any[], options
 	if (templateContent.length <= CHUNK_SIZE) {
 		// Small template - insert all at once
 		editor.insertBlocks(templateContent, editor.getTextCursorPosition().block, "replace");
-
 		// Move cursor to first editable position
-		setTimeout(moveCursorToFirstEditablePosition, 50);
+		setTimeout(moveCursorToFirstEditablePosition, CURSOR_POSITIONING_DELAY);
 	} else {
 		// Large template - chunked insertion
 		let currentBlock = editor.getTextCursorPosition().block;
@@ -331,7 +128,6 @@ const insertTemplate = (editor: BlockNoteEditor, templateContent: any[], options
 
 		const insertNextChunk = () => {
 			const chunk = templateContent.slice(insertedCount, insertedCount + CHUNK_SIZE);
-
 			if (insertedCount === 0) {
 				editor.insertBlocks(chunk, currentBlock, "replace");
 			} else {
@@ -340,12 +136,11 @@ const insertTemplate = (editor: BlockNoteEditor, templateContent: any[], options
 			}
 
 			insertedCount += CHUNK_SIZE;
-
 			if (insertedCount < templateContent.length) {
-				setTimeout(insertNextChunk, 10);
+				setTimeout(insertNextChunk, CHUNK_INSERTION_DELAY);
 			} else {
 				// All chunks inserted - move cursor to first editable position
-				setTimeout(moveCursorToFirstEditablePosition, 50);
+				setTimeout(moveCursorToFirstEditablePosition, CURSOR_POSITIONING_DELAY);
 			}
 		};
 
@@ -376,66 +171,44 @@ const createMenuSelectorItems = (onMenuSelect: (menuKey: string) => void): Defau
 		content: option.key,
 	}));
 
-// Navigation helpers - keeping for potential future use
-const KEYBOARD_HINTS = {
-	NAVIGATION: 'Use Backspace or Esc to go back',
-	SEARCH: 'Continue typing to search...',
-	SELECT: 'Press Enter to select'
-};
-
 export function CustomSlashMenu({ editor, config, templates = [], templateConfig }: CustomSlashMenuProps) {
+	// Debug: track component instances for debugging (but don't use for blocking)
+	const instanceId = useMemo(() => Math.random().toString(36).slice(2, 11), []);
+
 	// Enhanced state management with transition support
-	const [menuState, setMenuState] = React.useState<MenuState>(MENU_STATES.SELECTOR);
-	const [selectedMenu, setSelectedMenu] = React.useState<string | null>(null);
-	const [previousQuery, setPreviousQuery] = React.useState<string>('');
-	const [isTransitioning, setIsTransitioning] = React.useState<boolean>(false);
+	const [menuState, setMenuState] = useState<MenuState>(MENU_STATES.SELECTOR);
+	const [selectedMenu, setSelectedMenu] = useState<string | null>(null);
+	const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
 
 	// Debounced query state
-	const [debouncedQuery, setDebouncedQuery] = React.useState<string>('');
-	const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+	const [debouncedQuery, setDebouncedQuery] = useState<string>('');
+	const timeoutRef = useRef<number | null>(null);
 
 	// Get default slash menu items
 	const defaultItems = getDefaultReactSlashMenuItems(editor);
 
 	// Create template items - memoized to prevent recreation
-	const templateItems = React.useMemo(() =>
+	const templateItems = useMemo(() =>
 		createTemplateItems(editor, templates, templateConfig),
 		[editor, templates, templateConfig]
 	);
 
 	// Smooth transition handlers
-	const handleMenuSelect = React.useCallback((menuKey: string) => {
-		setIsTransitioning(true);
-		setMenuState(MENU_STATES.TRANSITIONING);
-
-		// Smooth transition with timeout
-		setTimeout(() => {
-			setSelectedMenu(menuKey);
-			setMenuState(MENU_STATES.FUZZY);
-			setIsTransitioning(false);
-		}, 150); // Quick transition
-	}, []);
-
-	const handleBackNavigation = React.useCallback(() => {
-		setIsTransitioning(true);
-		setMenuState(MENU_STATES.TRANSITIONING);
-
-		// Smooth transition back
-		setTimeout(() => {
-			setSelectedMenu(null);
-			setMenuState(MENU_STATES.SELECTOR);
-			setIsTransitioning(false);
-		}, 150);
+	const handleMenuSelect = useCallback((menuKey: string) => {
+		// Disable transitions temporarily to test flicker
+		setSelectedMenu(menuKey);
+		setMenuState(MENU_STATES.FUZZY);
+		setIsTransitioning(false);
 	}, []);
 
 	// Create menu selector items with callback
-	const menuSelectorItems = React.useMemo(() =>
+	const menuSelectorItems = useMemo(() =>
 		createMenuSelectorItems(handleMenuSelect),
 		[handleMenuSelect]
 	);
 
 	// Filter default items based on config
-	const filteredDefaultItems = React.useMemo(() => {
+	const filteredDefaultItems = useMemo(() => {
 		if (!config?.enabled || config.mode === 'default') {
 			return defaultItems;
 		}
@@ -459,31 +232,47 @@ export function CustomSlashMenu({ editor, config, templates = [], templateConfig
 		return defaultItems;
 	}, [defaultItems, config]);
 
-	// Enhanced debounce with transition awareness
-	const updateDebouncedQuery = React.useCallback((query: string) => {
+	// Enhanced debounce with transition awareness and race condition protection
+	const updateDebouncedQuery = useCallback((query: string) => {
+		// Always clear any existing timeout first
 		if (timeoutRef.current) {
 			clearTimeout(timeoutRef.current);
+			timeoutRef.current = null;
 		}
 
 		// Faster debounce during transitions for better UX
-		const debounceTime = isTransitioning ? 100 : 200;
+		const debounceTime = isTransitioning ? DEBOUNCE_FAST : DEBOUNCE_NORMAL;
 
 		timeoutRef.current = setTimeout(() => {
-			setDebouncedQuery(query);
+			// Race condition protection: only update state if component is still mounted
+			if (timeoutRef.current) {
+				setDebouncedQuery(query);
+				timeoutRef.current = null; // Clear ref after execution
+			}
 		}, debounceTime);
 	}, [isTransitioning]);
 
-	// Cleanup timeout on unmount
-	React.useEffect(() => {
+	// Cleanup timeout on unmount or menu state changes
+	useEffect(() => {
 		return () => {
 			if (timeoutRef.current) {
 				clearTimeout(timeoutRef.current);
+				timeoutRef.current = null;
 			}
 		};
 	}, []);
 
+	// Clear debounced query when menu state changes to prevent stale updates
+	useEffect(() => {
+		setDebouncedQuery('');
+		if (timeoutRef.current) {
+			clearTimeout(timeoutRef.current);
+			timeoutRef.current = null;
+		}
+	}, [menuState]);
+
 	// Enhanced query parsing with transition support
-	const parseQuery = React.useCallback((query: string) => {
+	const parseQuery = useCallback((query: string) => {
 		const trimmedQuery = query.trim();
 
 		// Handle empty query
@@ -519,8 +308,8 @@ export function CustomSlashMenu({ editor, config, templates = [], templateConfig
 	}, []);
 
 	// Debug logging
-	React.useEffect(() => {
-		console.debug('Custom Slash Menu Debug:', {
+	useEffect(() => {
+		console.debug(`Custom Slash Menu Debug [${instanceId}]:`, {
 			menuState,
 			selectedMenu,
 			isTransitioning,
@@ -530,9 +319,10 @@ export function CustomSlashMenu({ editor, config, templates = [], templateConfig
 			menu_selector_items: menuSelectorItems.length,
 			config: config,
 		});
-	}, [menuState, selectedMenu, isTransitioning, defaultItems, templateItems, filteredDefaultItems, menuSelectorItems, config]);
+	}, [instanceId, menuState, selectedMenu, isTransitioning, defaultItems, templateItems, filteredDefaultItems, menuSelectorItems, config]);
 
-	return React.createElement(SuggestionMenuController, {
+	// All editors can render their slash menus simultaneously
+	return createElement(SuggestionMenuController, {
 		triggerCharacter: "/",
 		getItems: async function(query) {
 			updateDebouncedQuery(query);
@@ -546,7 +336,7 @@ export function CustomSlashMenu({ editor, config, templates = [], templateConfig
 			const queryToUse = debouncedQuery || query;
 			const { shouldShowSelector, menuKey, searchQuery } = parseQuery(queryToUse);
 
-			console.debug('Enhanced Menu Query:', {
+			console.debug(`Enhanced Menu Query [${instanceId}]:`, {
 				query,
 				queryToUse,
 				shouldShowSelector,
@@ -583,29 +373,15 @@ export function CustomSlashMenu({ editor, config, templates = [], templateConfig
 
 				// Add menu-specific items with fuzzy search
 				switch (menuKey) {
-					case 't':
+					case MENU_KEYS.TEMPLATES:
 						items = searchQuery ?
 							advancedFuzzySearch(templateItems, searchQuery) :
 							templateItems;
 						break;
-					case 'b':
+					case MENU_KEYS.BLOCKS:
 						items = searchQuery ?
 							advancedFuzzySearch(filteredDefaultItems, searchQuery) :
 							filteredDefaultItems;
-						break;
-					case 'a':
-					case 'm':
-						const comingSoonItems = [{
-							title: `${MENU_OPTIONS.find(opt => opt.key === menuKey)?.label} Menu`,
-							onItemClick: () => console.log(`${menuKey} menu coming soon...`),
-							aliases: [],
-							group: 'Coming Soon',
-							icon: MENU_OPTIONS.find(opt => opt.key === menuKey)?.icon || '🔧',
-							subtext: 'This menu is under development',
-						}];
-						items = searchQuery ?
-							advancedFuzzySearch(comingSoonItems, searchQuery) :
-							comingSoonItems;
 						break;
 				}
 
