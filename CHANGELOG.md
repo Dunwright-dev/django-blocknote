@@ -2,6 +2,21 @@
 
 <!--next-version-placeholder-->
 
+## [2025.07.08.1]
+
+### Maintenance
+- Add debug logging to change log script (git) [#52](https://github.com/Dunwright-dev/django-blocknote/pull/52)
+- Update packages (deps) [#52](https://github.com/Dunwright-dev/django-blocknote/pull/52)
+
+### Bug Fixes
+- Remove + sidebar & refactor (menu) [#52](https://github.com/Dunwright-dev/django-blocknote/pull/52)
+  > - Major refactor getting ready to add working `+` for mouse menu navigation.
+- Remove memory leaks from widget manager.
+- Remove unnecessary editor create/destroy behavior.
+- Remove editor flicker when transition read-only/edit.
+- Add error handling and user notifications for template load errors.
+
+
 ## [2025.07.05.2]
 
 ### Maintenance
