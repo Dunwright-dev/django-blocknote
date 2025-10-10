@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.10.10.2]
+
+### Bug Fixes
+- Alias list is properly built for filtering (menu) [#61](https://github.com/Dunwright-dev/django-blocknote/pull/61)
+
+
 ## [2025.10.10.1]
 
 ### Bug Fixes
