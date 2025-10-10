@@ -1,3 +1,5 @@
+import { RiFunctionLine, RiFileAddLine } from 'react-icons/ri';
+
 /**
  * Menu key constants for slash menu navigation
  */
@@ -15,8 +17,9 @@ export interface MenuOption {
 	key: MenuKey;
 	label: string;
 	description: string;
-	icon: string;
+	icon: () => JSX.Element;
 	shortcut: string;
+	badge?: string;
 }
 
 /**
@@ -26,23 +29,26 @@ export interface MenuOption {
  * - key: The internal identifier and keyboard shortcut
  * - label: Display name shown to users
  * - description: Brief explanation of what the menu contains
- * - icon: Emoji or icon to display
+ * - icon: Function that returns a React icon component
  * - shortcut: Keyboard shortcut (usually same as key)
+ * - badge: Keyboard shortcut badge to display
  */
 export const MENU_OPTIONS: MenuOption[] = [
 	{
 		key: MENU_KEYS.BLOCKS,
 		label: 'Blocks',
 		description: 'Add basic content blocks',
-		icon: '🧱',
-		shortcut: MENU_KEYS.BLOCKS
+		icon: () => <RiFunctionLine size={18} />,
+		shortcut: MENU_KEYS.BLOCKS,
+		badge: '/b'
 	},
 	{
 		key: MENU_KEYS.TEMPLATES,
 		label: 'Templates',
 		description: 'Insert document templates',
-		icon: '📋',
-		shortcut: MENU_KEYS.TEMPLATES
+		icon: () => <RiFileAddLine size={18} />,
+		shortcut: MENU_KEYS.TEMPLATES,
+		badge: '/t'
 	}
 ];
 

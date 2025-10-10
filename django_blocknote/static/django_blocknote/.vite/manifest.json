@@ -1,12 +1,12 @@
 {
-  "src/blocknote.js": {
-    "file": "js/blocknote.BCm32JCZ.js",
+  "src/blocknote.ts": {
+    "file": "js/blocknote.tGaNlvSH.js",
     "name": "blocknote",
-    "src": "src/blocknote.js",
+    "src": "src/blocknote.ts",
     "isEntry": true
   },
   "style.css": {
-    "file": "css/blocknote.Cf56_wzw.css",
+    "file": "css/blocknote.CU76FBI6.css",
     "src": "style.css"
   }
 }
