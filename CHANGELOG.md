@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## [2025.10.10.1]
+
+### Bug Fixes
+- Update base and template menus for consistency with blocks (menu) [#59](https://github.com/Dunwright-dev/django-blocknote/pull/59)
+- Updated css so selected menu hover is aligned correctly (menu) [#59](https://github.com/Dunwright-dev/django-blocknote/pull/59)
+
+
 ## [2025.07.08.1]
 
 ### Maintenance
