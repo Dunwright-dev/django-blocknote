@@ -357,11 +357,17 @@
 /* Menu items with spacing and visual improvements */
 .bn-suggestion-menu-item {
   margin-bottom: 2px !important;
-  padding: 10px 12px 12px 12px !important;
+  padding: 8px 12px !important;
   border-radius: 8px !important;
   min-height: 44px !important;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
   cursor: pointer !important;
+}
+
+/* Ensure Mantine Group allows natural height growth */
+.bn-suggestion-menu-item.mantine-Group-root {
+  --group-gap: 0.5rem !important;
+  min-height: auto !important;
 }
 
 .bn-suggestion-menu-item:last-child {
