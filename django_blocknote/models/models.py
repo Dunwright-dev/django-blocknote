@@ -453,13 +453,16 @@ class DocumentTemplate(models.Model):
             # Build templates list efficiently with list comprehension
             templates = []
             for template_data in templates_qs:
-                # Parse JSON string to get list
-                try:
-                    import json
-
-                    aliases_list = json.loads(template_data["aliases"] or "[]")
-                except (json.JSONDecodeError, ValueError):
-                    aliases_list = []  # Fallback for invalid JSON
+                # Parse comma-separated aliases string to get list
+                aliases_str = template_data["aliases"].strip()
+                if aliases_str:
+                    aliases_list = [
+                        alias.strip()
+                        for alias in aliases_str.split(",")
+                        if alias.strip()
+                    ]
+                else:
+                    aliases_list = []
 
                 templates.append(
                     {
