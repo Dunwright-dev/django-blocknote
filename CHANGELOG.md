@@ -6,6 +6,8 @@
 
 ### Bug Fixes
 - Alias list is properly built for filtering (menu) [#61](https://github.com/Dunwright-dev/django-blocknote/pull/61)
+- Update base and template menus for consistency with blocks (menu) [#59](https://github.com/Dunwright-dev/django-blocknote/pull/59)
+- Updated css so selected menu hover is aligned correctly (menu) [#59](https://github.com/Dunwright-dev/django-blocknote/pull/59)
 
 
 ## [2025.07.08.1]
