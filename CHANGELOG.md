@@ -2,9 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## [2025.10.13.2]
+
+### Maintenance
+- Upgrade BlockNote and all dependencies to latest versions (deps) [#64](https://github.com/Dunwright-dev/django-blocknote/pull/64)
+
+
 ## [2025.10.13.1]
 
 ### Maintenance
+- Upgrade BlockNote and all dependencies to latest versions (deps) [#64](https://github.com/Dunwright-dev/django-blocknote/pull/64)
 - Move the debug info to the bottom of the page (example) [#67](https://github.com/Dunwright-dev/django-blocknote/pull/67)
 
 
