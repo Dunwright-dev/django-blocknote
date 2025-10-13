@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.10.13.1]
+
+### Maintenance
+- Move the debug info to the bottom of the page (example) [#67](https://github.com/Dunwright-dev/django-blocknote/pull/67)
+
+
 ## [2025.10.10.2]
 
 ### Bug Fixes
