@@ -81,7 +81,7 @@ export function BlockNoteEditor({
 	templateConfig: TemplateConfig;
 	debounceDelay?: number;
 }) {
-	console.debug('Creating BlockNote 0.31.0 editor...');
+	console.debug('Creating BlockNote 0.41.1 editor...');
 
 	// Use upload hook - cast to ImageUploadConfig since we know it's images for now
 	const { uploadFile } = useBlockNoteImageUpload(uploadConfig as ImageUploadConfig);

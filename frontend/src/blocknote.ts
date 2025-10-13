@@ -18,7 +18,7 @@ import type {
     TemplateConfig,
 } from './types';
 
-console.debug('Loading BlockNote 0.31.0 with React 19 (HTMX compatible)...');
+console.debug('Loading BlockNote 0.41.1 with React 19 (HTMX compatible)...');
 console.debug('🚀 BlockNote script started loading');
 console.debug('React available at start:', typeof React !== 'undefined');
 console.debug('ReactDOM available at start:', typeof ReactDOM !== 'undefined');
