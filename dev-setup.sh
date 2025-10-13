@@ -659,7 +659,6 @@ cat > templates/base.html << 'BASE_TEMPLATE_EOF'
         }
     </style>
     {% blocknote_full %}
-    {% blocknote_asset_debug %}
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -686,6 +685,8 @@ cat > templates/base.html << 'BASE_TEMPLATE_EOF'
         {% block content %}
         {% endblock %}
     </div>
+
+    {% blocknote_asset_debug %}
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
