@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.10.13.1]
+
+### Maintenance
+- Upgrade BlockNote and all dependencies to latest versions (deps) [#64](https://github.com/Dunwright-dev/django-blocknote/pull/64)
+
+
 ## [2025.10.10.2]
 
 ### Bug Fixes
