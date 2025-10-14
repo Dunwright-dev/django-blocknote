@@ -168,7 +168,7 @@ const createMenuSelectorItems = (onMenuSelect: (menuKey: string) => void): Defau
 		group: 'Menus',
 		icon: option.icon(),
 		subtext: option.description,
-		badge: option.badge,
+		badge: option.shortcut,
 	}));
 
 export function CustomSlashMenu({ editor, config, templates = [], templateConfig }: CustomSlashMenuProps) {

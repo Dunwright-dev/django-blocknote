@@ -19,7 +19,6 @@ export interface MenuOption {
 	description: string;
 	icon: () => JSX.Element;
 	shortcut: string;
-	badge?: string;
 }
 
 /**
@@ -40,7 +39,6 @@ export const MENU_OPTIONS: MenuOption[] = [
 		description: 'Add basic content blocks',
 		icon: () => <RiFunctionLine size={18} />,
 		shortcut: MENU_KEYS.BLOCKS,
-		badge: '/b'
 	},
 	{
 		key: MENU_KEYS.TEMPLATES,
@@ -48,7 +46,6 @@ export const MENU_OPTIONS: MenuOption[] = [
 		description: 'Insert document templates',
 		icon: () => <RiFileAddLine size={18} />,
 		shortcut: MENU_KEYS.TEMPLATES,
-		badge: '/t'
 	}
 ];
 
