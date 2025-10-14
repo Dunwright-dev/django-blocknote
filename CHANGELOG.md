@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.10.14.2]
+
+### Bug Fixes
+- Fix menu min-height and recalc max-height (menu) [#71](https://github.com/Dunwright-dev/django-blocknote/pull/71)
+
+
 ## [2025.10.14.1]
 
 ### Maintenance
