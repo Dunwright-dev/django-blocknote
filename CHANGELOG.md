@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.10.14.1]
+
+### Maintenance
+- Removed redundant config and used shortcut value (menu) [#69](https://github.com/Dunwright-dev/django-blocknote/pull/69)
+
+
 ## [2025.10.13.2]
 
 ### Maintenance
