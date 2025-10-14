@@ -317,6 +317,7 @@
   background: white !important;
   backdrop-filter: blur(8px) !important;
   animation: menuSlideIn 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  min-width: 300px !important;
 }
 
 /* Group labels with proper spacing */
