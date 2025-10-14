@@ -64,11 +64,7 @@ const getTransitionDummyItem = (targetMenu: string | null): DefaultReactSuggesti
 };
 
 const insertTemplate = (editor: BlockNoteEditor, templateContent: any[], options: TemplateConfig) => {
-	console.debug('🔧 Template insertion started:', { blocks: templateContent.length });
 	if (templateContent.length === 0) return;
-
-	console.debug('MAX BLOCK OPTION', options.maxBlocks)
-	console.debug('CHUNK SIZE', options.chunkSize)
 
 	const MAX_BLOCKS = options.maxBlocks;
 	const CHUNK_SIZE = options.chunkSize;
@@ -100,7 +96,6 @@ const insertTemplate = (editor: BlockNoteEditor, templateContent: any[], options
 					);
 
 					if (isEmpty || hasPlaceholderText) {
-						console.debug(`🎯 Moving cursor to block ${i} (${block.type})`);
 						editor.setTextCursorPosition(block, "end");
 						return;
 					}
@@ -172,8 +167,6 @@ const createMenuSelectorItems = (onMenuSelect: (menuKey: string) => void): Defau
 	}));
 
 export function CustomSlashMenu({ editor, config, templates = [], templateConfig }: CustomSlashMenuProps) {
-	// Debug: track component instances for debugging (but don't use for blocking)
-	const instanceId = useMemo(() => Math.random().toString(36).slice(2, 11), []);
 
 	// Enhanced state management with transition support
 	const [menuState, setMenuState] = useState<MenuState>(MENU_STATES.SELECTOR);
@@ -198,7 +191,6 @@ export function CustomSlashMenu({ editor, config, templates = [], templateConfig
 
 	// Smooth transition handlers
 	const handleMenuSelect = useCallback((menuKey: string) => {
-		// Disable transitions temporarily to test flicker
 		setSelectedMenu(menuKey);
 		setMenuState(MENU_STATES.FUZZY);
 		setIsTransitioning(false);
@@ -310,20 +302,6 @@ export function CustomSlashMenu({ editor, config, templates = [], templateConfig
 		return { shouldShowSelector: true, menuKey: null, searchQuery: trimmedQuery };
 	}, []);
 
-	// Debug logging
-	useEffect(() => {
-		console.debug(`Custom Slash Menu Debug [${instanceId}]:`, {
-			menuState,
-			selectedMenu,
-			isTransitioning,
-			total_default_items: defaultItems.length,
-			template_items: templateItems.length,
-			filtered_items: filteredDefaultItems.length,
-			menu_selector_items: menuSelectorItems.length,
-			config: config,
-		});
-	}, [instanceId, menuState, selectedMenu, isTransitioning, defaultItems, templateItems, filteredDefaultItems, menuSelectorItems, config]);
-
 	// All editors can render their slash menus simultaneously
 	return createElement(SuggestionMenuController, {
 		triggerCharacter: "/",
@@ -349,47 +327,41 @@ export function CustomSlashMenu({ editor, config, templates = [], templateConfig
 				shouldShowSelector // Returning to selector menu
 			);
 			
-			if (isReturningToMainMenu) {
-				console.debug(`Menu resize trigger: "${prevQuery}" → "${currentQuery}"`);
-				
-				// Immediate synchronous resize attempt
+			// Detect any query change that might affect menu positioning
+			const needsResize = (
+				prevQuery !== currentQuery && // Query has changed
+				(
+					// Going back to main menu (major size change)
+					isReturningToMainMenu ||
+					// Any change within submenu (filtering changes item count)
+					(!shouldShowSelector && menuKey)
+				)
+			);
+			
+			if (needsResize) {
+				// Trigger menu repositioning for proper positioning during filtering
 				const floatingContainer = document.querySelector('[data-floating-ui-focusable]') as HTMLElement;
 				
+				// Force layout recalculation and dispatch resize events
+				window.dispatchEvent(new Event('resize'));
+				
 				if (floatingContainer) {
-					console.debug('Found floating container, forcing synchronous recalculation...');
-					
-					// Immediate synchronous force of layout recalculation
-					const originalTransform = floatingContainer.style.transform;
-					floatingContainer.style.transform = 'translateZ(0)';
-					floatingContainer.offsetHeight; // Force reflow
-					floatingContainer.style.transform = originalTransform;
-					
-					// Immediate event dispatching
-					window.dispatchEvent(new Event('resize'));
-					document.dispatchEvent(new Event('scroll', { bubbles: true }));
+					// Force reflow to ensure positioning recalculation
+					const originalDisplay = floatingContainer.style.display;
+					floatingContainer.style.display = 'none';
+					floatingContainer.offsetHeight;
+					floatingContainer.style.display = originalDisplay;
 				}
 				
-				// Also schedule async backup
+				// Async backup for complex transitions
 				requestAnimationFrame(() => {
-					if (floatingContainer) {
-						window.dispatchEvent(new Event('resize'));
-						floatingContainer.dispatchEvent(new Event('scroll', { bubbles: true }));
-						console.debug('Async backup resize triggered');
-					}
+					window.dispatchEvent(new Event('resize'));
+					document.dispatchEvent(new Event('scroll', { bubbles: true }));
 				});
 			}
 			
 			// Update the previous query for next comparison
 			prevQueryRef.current = currentQuery;
-
-			console.debug(`Enhanced Menu Query [${instanceId}]:`, {
-				query,
-				queryToUse,
-				shouldShowSelector,
-				menuKey,
-				searchQuery,
-				menuState
-			});
 
 			// Show selector menu with fuzzy filtering
 			if (shouldShowSelector) {
@@ -398,7 +370,6 @@ export function CustomSlashMenu({ editor, config, templates = [], templateConfig
 					setSelectedMenu(null);
 				}
 
-				// Apply fuzzy search to menu selector items
 				return searchQuery ?
 					advancedFuzzySearch(menuSelectorItems, searchQuery) :
 					menuSelectorItems;
@@ -407,7 +378,7 @@ export function CustomSlashMenu({ editor, config, templates = [], templateConfig
 			// Handle menu selection and transition
 			if (menuKey && menuState !== MENU_STATES.FUZZY) {
 				handleMenuSelect(menuKey);
-				return [getTransitionDummyItem(menuKey)]; // Return dummy item during transition
+				return [getTransitionDummyItem(menuKey)];
 			}
 
 			// Show fuzzy search results for specific menus
@@ -420,24 +391,36 @@ export function CustomSlashMenu({ editor, config, templates = [], templateConfig
 				// Add menu-specific items with fuzzy search
 				switch (menuKey) {
 					case MENU_KEYS.TEMPLATES:
-						items = searchQuery ?
-							advancedFuzzySearch(templateItems, searchQuery) :
-							templateItems;
+						if (searchQuery) {
+							// Fix for group header accumulation bug:
+							// Remove groups during filtered search to prevent BlockNote from 
+							// accumulating duplicate group headers when transitioning back to unfiltered state
+							items = advancedFuzzySearch(templateItems, searchQuery)
+								.map(item => ({ ...item, group: undefined }));
+						} else {
+							// Show groups in unfiltered state, use fresh array to break any caching
+							items = [...templateItems];
+						}
 						break;
 					case MENU_KEYS.BLOCKS:
-						items = searchQuery ?
-							advancedFuzzySearch(filteredDefaultItems, searchQuery) :
-							filteredDefaultItems;
+						if (searchQuery) {
+							// Fix for group header accumulation bug:
+							// Remove groups during filtered search to prevent BlockNote from 
+							// accumulating duplicate group headers when transitioning back to unfiltered state
+							items = advancedFuzzySearch(filteredDefaultItems, searchQuery)
+								.map(item => ({ ...item, group: undefined }));
+						} else {
+							// Show groups in unfiltered state, use fresh array to break any caching
+							items = [...filteredDefaultItems];
+						}
 						break;
 				}
 
 				return items;
 			}
 
-			// Fallback with fuzzy search
-			return searchQuery ?
-				advancedFuzzySearch(menuSelectorItems, searchQuery) :
-				menuSelectorItems;
+			// Fallback
+			return menuSelectorItems;
 		},
 		onItemClick: function(item) {
 			// Handle regular item clicks
