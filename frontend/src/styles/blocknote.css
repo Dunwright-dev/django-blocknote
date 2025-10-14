@@ -443,3 +443,21 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* Fix BlockNote suggestion menu min-height issue */
+/* BlockNote hardcodes min-height: 300px in their size middleware */
+/* Use a smaller min-height that prevents menu misplacement while allowing natural sizing */
+[data-floating-ui-focusable] {
+  min-height: 120px !important; /* Reasonable minimum for 2-3 menu items */
+  transition: height 0.15s ease-out, min-height 0.15s ease-out !important;
+}
+
+/* Force resize animation trigger */
+[data-floating-ui-focusable].force-recalc {
+  animation: forceRecalc 1ms ease-in-out;
+}
+
+@keyframes forceRecalc {
+  0% { transform: translateZ(0); }
+  100% { transform: translateZ(0); }
+}
