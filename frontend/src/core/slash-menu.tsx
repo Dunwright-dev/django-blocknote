@@ -183,6 +183,9 @@ export function CustomSlashMenu({ editor, config, templates = [], templateConfig
 	// Debounced query state
 	const [debouncedQuery, setDebouncedQuery] = useState<string>('');
 	const timeoutRef = useRef<number | null>(null);
+	
+	// Track previous query to detect submenu → main menu transitions
+	const prevQueryRef = useRef<string>('');
 
 	// Get default slash menu items
 	const defaultItems = getDefaultReactSlashMenuItems(editor);
@@ -335,6 +338,49 @@ export function CustomSlashMenu({ editor, config, templates = [], templateConfig
 			// Use debounced query for better performance
 			const queryToUse = debouncedQuery || query;
 			const { shouldShowSelector, menuKey, searchQuery } = parseQuery(queryToUse);
+			
+			// Detect submenu → main menu transition and trigger resize
+			const currentQuery = queryToUse;
+			const prevQuery = prevQueryRef.current;
+			
+			const isReturningToMainMenu = (
+				prevQuery.length > 0 && // Had a submenu query (like "b")
+				currentQuery === '' && // Now back to empty (main menu)
+				shouldShowSelector // Returning to selector menu
+			);
+			
+			if (isReturningToMainMenu) {
+				console.debug(`Menu resize trigger: "${prevQuery}" → "${currentQuery}"`);
+				
+				// Immediate synchronous resize attempt
+				const floatingContainer = document.querySelector('[data-floating-ui-focusable]') as HTMLElement;
+				
+				if (floatingContainer) {
+					console.debug('Found floating container, forcing synchronous recalculation...');
+					
+					// Immediate synchronous force of layout recalculation
+					const originalTransform = floatingContainer.style.transform;
+					floatingContainer.style.transform = 'translateZ(0)';
+					floatingContainer.offsetHeight; // Force reflow
+					floatingContainer.style.transform = originalTransform;
+					
+					// Immediate event dispatching
+					window.dispatchEvent(new Event('resize'));
+					document.dispatchEvent(new Event('scroll', { bubbles: true }));
+				}
+				
+				// Also schedule async backup
+				requestAnimationFrame(() => {
+					if (floatingContainer) {
+						window.dispatchEvent(new Event('resize'));
+						floatingContainer.dispatchEvent(new Event('scroll', { bubbles: true }));
+						console.debug('Async backup resize triggered');
+					}
+				});
+			}
+			
+			// Update the previous query for next comparison
+			prevQueryRef.current = currentQuery;
 
 			console.debug(`Enhanced Menu Query [${instanceId}]:`, {
 				query,
