@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.10.14.4]
+
+### Maintenance
+- Add min-width for visual consistancy (menu) [#74](https://github.com/Dunwright-dev/django-blocknote/pull/74)
+
+
 ## [2025.10.14.3]
 
 ### Bug Fixes
