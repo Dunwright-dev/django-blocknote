@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.10.14.3]
+
+### Bug Fixes
+- Prevent group header accumulation in submenu filtering (Menu) [#56](https://github.com/Dunwright-dev/django-blocknote/pull/56)
+
+
 ## [2025.10.14.2]
 
 ### Bug Fixes
