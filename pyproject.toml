@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-blocknote"
-version = "2025.10.14.4"
+version = "2025.10.26.1"
 description = "BlockNote rich text editor integration for Django"
 readme = "README.rst"
 license = "BSD-3-Clause"

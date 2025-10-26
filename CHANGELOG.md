@@ -2,6 +2,15 @@
 
 <!--next-version-placeholder-->
 
+## [2025.10.26.1]
+
+### Maintenance
+- Update cache buster values (manifest) [#77](https://github.com/Dunwright-dev/django-blocknote/pull/77)
+
+### Bug Fixes
+- Add import for models back in (import) [#77](https://github.com/Dunwright-dev/django-blocknote/pull/77)
+
+
 ## [2025.10.14.4]
 
 ### Maintenance
