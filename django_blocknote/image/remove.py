@@ -5,7 +5,10 @@ from django.conf import settings
 import structlog
 from django.contrib.auth import get_user_model
 from django.core.files.storage import default_storage
-from django.db import transaction
+from django.db import (
+    models,
+    transaction,
+)
 from django.utils import timezone
 from django_blocknote.models import UnusedImageURLS
 import urllib.parse
