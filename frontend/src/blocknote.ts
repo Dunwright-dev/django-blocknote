@@ -7,6 +7,12 @@ import { scanForWidgets } from './core/dom-scanner';
 import {
     initWidgetWithData,
     blockNoteRoots,
+    cleanupWidget,
+    cleanupAllWidgets,
+    cleanupWidgetsByIds,
+    hasWidget,
+    getActiveWidgetCount,
+    cleanupOrphanedWidgets,
 } from './core/widget-manager';
 import { checkReady } from './utils/helpers';
 import type {
@@ -58,6 +64,12 @@ interface DjangoBlockNoteAPI {
         templateConfig: TemplateConfig,
     ) => void;
     blockNoteRoots: Map<string, unknown>;
+    cleanupWidget: (editorId: string) => void;
+    cleanupAllWidgets: () => void;
+    cleanupWidgetsByIds: (editorIds: string[]) => void;
+    hasWidget: (editorId: string) => boolean;
+    getActiveWidgetCount: () => number;
+    cleanupOrphanedWidgets: () => void;
 }
 
 // Extend Window interface
@@ -156,7 +168,13 @@ document.addEventListener('htmx:load', function(event: HTMXEvent): void {
 window.DjangoBlockNote = {
     scanForWidgets: scanForWidgetsWithInit,
     initWidget,
-    blockNoteRoots
+    blockNoteRoots,
+    cleanupWidget,
+    cleanupAllWidgets,
+    cleanupWidgetsByIds,
+    hasWidget,
+    getActiveWidgetCount,
+    cleanupOrphanedWidgets,
 };
 
 // Debug: Confirm DjangoBlockNote is available

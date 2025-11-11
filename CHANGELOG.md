@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## [2025.11.11.1]
+
+### Bug Fixes
+- prevent BlockNote widget content persistence across form subs (logic) [#79](https://github.com/Dunwright-dev/django-blocknote/pull/79)
+
+
 ## [2025.10.26.1]
 
 ### Maintenance

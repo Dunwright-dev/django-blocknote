@@ -212,19 +212,51 @@ export function BlockNoteEditor({
 		}
 	}, [editor, readonly, isReadonly, editorConfig._django_readonly, debouncedProcessChange]);
 
+	// Track if this component is being properly cleaned up (to avoid stale onChange calls)
+	const isUnmountingRef = useRef(false);
+
+	// Listen for cleanup events to prevent stale onChange calls
+	useEffect(() => {
+		const handleCleanup = (event: CustomEvent) => {
+			if (event.detail.editorId === editorId) {
+				console.debug('🧹 Received cleanup signal for:', editorId);
+				isUnmountingRef.current = true;
+			}
+		};
+
+		document.addEventListener('blocknote-cleanup', handleCleanup as EventListener);
+		
+		return () => {
+			document.removeEventListener('blocknote-cleanup', handleCleanup as EventListener);
+		};
+	}, [editorId]);
+
 	// Cleanup debounced function on unmount
 	useEffect(() => {
 		return () => {
-			// Force final execution of debounced function on unmount
-			if (currentContent && onChange) {
+			// Only call onChange on unmount if we have current content AND this isn't a forced cleanup
+			// This prevents stale content from previous widgets being passed to new widgets
+			if (currentContent && onChange && !isUnmountingRef.current) {
 				try {
-					onChange(currentContent);
+					// Double-check that the content isn't empty before firing final onChange
+					if (Array.isArray(currentContent) && currentContent.length > 0) {
+						onChange(currentContent);
+						console.debug('🔄 Final onChange on unmount for:', editorId);
+					} else {
+						console.debug('🧹 Skipping empty content onChange on unmount for:', editorId);
+					}
 				} catch (error) {
 					console.warn('Error during final change execution:', error);
 				}
+			} else {
+				console.debug('🧹 Skipping onChange on unmount for:', editorId, {
+					hasCurrentContent: !!currentContent,
+					hasOnChange: !!onChange,
+					isUnmounting: isUnmountingRef.current
+				});
 			}
 		};
-	}, [currentContent, onChange]);
+	}, [currentContent, onChange, editorId]);
 
 	//  Calculate editable state for BlockNoteView
 	const isEditable = !(readonly || isReadonly || editorConfig._django_readonly);
