@@ -129,9 +129,21 @@ def blocknote_form_validation():
 
                     let hasErrors = false;
 
+                    // Collect editor IDs from this form for cleanup
+                    const editorIds = [];
+
                     blockNoteTextareas.forEach((textarea, index) => {
                         const value = textarea.value.trim();
                         const fieldName = textarea.name || textarea.id || `field_${index}`;
+
+                        // Extract editor ID for cleanup (remove '_editor' suffix if present)
+                        let editorId = textarea.id;
+                        if (editorId && editorId.endsWith('_editor')) {
+                            editorId = editorId.slice(0, -7);
+                        }
+                        if (editorId) {
+                            editorIds.push(editorId);
+                        }
 
                         // If empty, set to valid empty array
                         if (!value) {
@@ -178,6 +190,44 @@ def blocknote_form_validation():
                     }
 
                     console.log('✅ All BlockNote fields validated successfully');
+
+                    // Clean up BlockNote widgets for this form to prevent memory leaks
+                    if (window.DjangoBlockNote && editorIds.length > 0) {
+                        console.log('🧹 Cleaning up BlockNote widgets for form submission:', editorIds);
+                        
+                        // Use a small delay to ensure form data is captured before cleanup
+                        setTimeout(() => {
+                            try {
+                                // Use the improved cleanup function if available
+                                if (typeof window.DjangoBlockNote.cleanupWidgetsByIds === 'function') {
+                                    window.DjangoBlockNote.cleanupWidgetsByIds(editorIds);
+                                    console.log('✅ Form widgets cleaned up using cleanupWidgetsByIds');
+                                } else {
+                                    // Fallback to manual cleanup for backward compatibility
+                                    editorIds.forEach(editorId => {
+                                        try {
+                                            if (window.DjangoBlockNote.blockNoteRoots && window.DjangoBlockNote.blockNoteRoots.has(editorId)) {
+                                                const root = window.DjangoBlockNote.blockNoteRoots.get(editorId);
+                                                if (root && typeof root.unmount === 'function') {
+                                                    console.debug('🧹 Cleaning up widget:', editorId);
+                                                    root.unmount();
+                                                    window.DjangoBlockNote.blockNoteRoots.delete(editorId);
+                                                    console.debug('✅ Successfully cleaned up React root for:', editorId);
+                                                }
+                                            }
+                                        } catch (cleanupError) {
+                                            console.warn('⚠️ Error during widget cleanup for', editorId, ':', cleanupError);
+                                            if (window.DjangoBlockNote.blockNoteRoots) {
+                                                window.DjangoBlockNote.blockNoteRoots.delete(editorId);
+                                            }
+                                        }
+                                    });
+                                }
+                            } catch (error) {
+                                console.error('❌ Critical error during form widget cleanup:', error);
+                            }
+                        }, 100); // Small delay to ensure form submission starts first
+                    }
                 });
             }
         });
@@ -185,18 +235,66 @@ def blocknote_form_validation():
         // Also handle HTMX form submissions if present
         if (typeof htmx !== 'undefined') {
             document.addEventListener('htmx:beforeRequest', function(evt) {
-                // Similar validation for HTMX requests
+                // Similar validation and cleanup for HTMX requests
                 const form = evt.target.closest('form');
                 if (form) {
                     const blockNoteTextareas = form.querySelectorAll(
                         'textarea[id*="blocknote"], textarea[data-blocknote], textarea[id$="_editor"], .django-blocknote-wrapper textarea'
                     );
 
+                    const editorIds = [];
+
                     blockNoteTextareas.forEach(textarea => {
                         if (!textarea.value.trim()) {
                             textarea.value = '[]';
                         }
+
+                        // Extract editor ID for cleanup
+                        let editorId = textarea.id;
+                        if (editorId && editorId.endsWith('_editor')) {
+                            editorId = editorId.slice(0, -7);
+                        }
+                        if (editorId) {
+                            editorIds.push(editorId);
+                        }
                     });
+
+                    // Clean up widgets for HTMX submissions
+                    if (window.DjangoBlockNote && editorIds.length > 0) {
+                        console.log('🧹 HTMX: Cleaning up BlockNote widgets for form submission:', editorIds);
+                        
+                        setTimeout(() => {
+                            try {
+                                // Use the improved cleanup function if available
+                                if (typeof window.DjangoBlockNote.cleanupWidgetsByIds === 'function') {
+                                    window.DjangoBlockNote.cleanupWidgetsByIds(editorIds);
+                                    console.log('✅ HTMX: Form widgets cleaned up using cleanupWidgetsByIds');
+                                } else {
+                                    // Fallback to manual cleanup for backward compatibility
+                                    editorIds.forEach(editorId => {
+                                        try {
+                                            if (window.DjangoBlockNote.blockNoteRoots && window.DjangoBlockNote.blockNoteRoots.has(editorId)) {
+                                                const root = window.DjangoBlockNote.blockNoteRoots.get(editorId);
+                                                if (root && typeof root.unmount === 'function') {
+                                                    console.debug('🧹 HTMX: Cleaning up widget:', editorId);
+                                                    root.unmount();
+                                                    window.DjangoBlockNote.blockNoteRoots.delete(editorId);
+                                                    console.debug('✅ HTMX: Successfully cleaned up React root for:', editorId);
+                                                }
+                                            }
+                                        } catch (cleanupError) {
+                                            console.warn('⚠️ HTMX: Error during widget cleanup for', editorId, ':', cleanupError);
+                                            if (window.DjangoBlockNote.blockNoteRoots) {
+                                                window.DjangoBlockNote.blockNoteRoots.delete(editorId);
+                                            }
+                                        }
+                                    });
+                                }
+                            } catch (error) {
+                                console.error('❌ HTMX: Critical error during form widget cleanup:', error);
+                            }
+                        }, 100);
+                    }
                 }
             });
         }
@@ -247,13 +345,24 @@ def blocknote_form_validation_debug():
                     console.group(`🔍 Validating Form ${formIndex + 1}`);
 
                     let hasErrors = false;
+                    const editorIds = [];
 
                     blockNoteTextareas.forEach((textarea, index) => {
                         const value = textarea.value.trim();
                         const fieldName = textarea.name || textarea.id || `field_${index}`;
 
+                        // Extract editor ID for cleanup (debug version)
+                        let editorId = textarea.id;
+                        if (editorId && editorId.endsWith('_editor')) {
+                            editorId = editorId.slice(0, -7);
+                        }
+                        if (editorId) {
+                            editorIds.push(editorId);
+                        }
+
                         console.log(`Checking field: ${fieldName}`);
                         console.log(`  Value length: ${value.length}`);
+                        console.log(`  Editor ID for cleanup: ${editorId}`);
 
                         if (!value) {
                             textarea.value = '[]';
@@ -293,6 +402,45 @@ def blocknote_form_validation_debug():
                         e.preventDefault();
                         alert('Please fix the errors in the form before submitting.');
                         return false;
+                    }
+
+                    // Debug: Clean up BlockNote widgets for this form
+                    if (window.DjangoBlockNote && editorIds.length > 0) {
+                        console.group('🧹 Debug: BlockNote Widget Cleanup');
+                        console.log('Editor IDs to cleanup:', editorIds);
+                        console.log('Active widgets before cleanup:', window.DjangoBlockNote.getActiveWidgetCount ? window.DjangoBlockNote.getActiveWidgetCount() : 'unknown');
+                        
+                        setTimeout(() => {
+                            try {
+                                if (typeof window.DjangoBlockNote.cleanupWidgetsByIds === 'function') {
+                                    window.DjangoBlockNote.cleanupWidgetsByIds(editorIds);
+                                    console.log('✅ Debug: Form widgets cleaned up using cleanupWidgetsByIds');
+                                    console.log('Active widgets after cleanup:', window.DjangoBlockNote.getActiveWidgetCount ? window.DjangoBlockNote.getActiveWidgetCount() : 'unknown');
+                                } else {
+                                    console.warn('⚠️ Debug: cleanupWidgetsByIds function not available, using fallback');
+                                    editorIds.forEach(editorId => {
+                                        try {
+                                            if (window.DjangoBlockNote.blockNoteRoots && window.DjangoBlockNote.blockNoteRoots.has(editorId)) {
+                                                const root = window.DjangoBlockNote.blockNoteRoots.get(editorId);
+                                                if (root && typeof root.unmount === 'function') {
+                                                    root.unmount();
+                                                    window.DjangoBlockNote.blockNoteRoots.delete(editorId);
+                                                    console.log(`✅ Debug: Cleaned up widget ${editorId}`);
+                                                }
+                                            }
+                                        } catch (cleanupError) {
+                                            console.error(`❌ Debug: Error cleaning up widget ${editorId}:`, cleanupError);
+                                            if (window.DjangoBlockNote.blockNoteRoots) {
+                                                window.DjangoBlockNote.blockNoteRoots.delete(editorId);
+                                            }
+                                        }
+                                    });
+                                }
+                            } catch (error) {
+                                console.error('❌ Debug: Critical error during form widget cleanup:', error);
+                            }
+                            console.groupEnd();
+                        }, 100);
                     }
                 });
             }

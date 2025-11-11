@@ -19,13 +19,25 @@ export function cleanupWidget(editorId: string): void {
 	const root = blockNoteRoots.get(editorId);
 	if (root) {
 		try {
+			// Signal to any React components that they're being properly cleaned up
+			// This prevents stale onChange calls during unmount
+			const cleanupEvent = new CustomEvent('blocknote-cleanup', { 
+				detail: { editorId } 
+			});
+			document.dispatchEvent(cleanupEvent);
+			
 			root.unmount();
 			blockNoteRoots.delete(editorId);
+			
+
+			
 			console.debug('✅ Successfully cleaned up React root for:', editorId);
 		} catch (error) {
 			console.error('❌ Error during widget cleanup for', editorId, ':', error);
 			// Still remove from map even if unmount failed
 			blockNoteRoots.delete(editorId);
+			
+
 		}
 	} else {
 		console.debug('ℹ️ No React root found to cleanup for:', editorId);
@@ -40,6 +52,47 @@ export function cleanupAllWidgets(): void {
 	console.debug('✅ All widgets cleaned up');
 }
 
+// Cleanup widgets by editor IDs (useful for form submissions)
+export function cleanupWidgetsByIds(editorIds: string[]): void {
+	console.debug('🧹 Cleaning up specific widgets:', editorIds);
+	editorIds.forEach(editorId => cleanupWidget(editorId));
+	console.debug('✅ Specific widgets cleaned up');
+}
+
+// Check if a widget exists in the tracking map
+export function hasWidget(editorId: string): boolean {
+	return blockNoteRoots.has(editorId);
+}
+
+// Get the count of active widgets
+export function getActiveWidgetCount(): number {
+	return blockNoteRoots.size;
+}
+
+// Clean up orphaned widgets (widgets whose DOM elements no longer exist)
+export function cleanupOrphanedWidgets(): void {
+	console.debug('🔍 Checking for orphaned widgets...');
+	const orphanedIds: string[] = [];
+	
+	blockNoteRoots.forEach((root, editorId) => {
+		// Check if the DOM elements still exist
+		const editorContainer = document.getElementById(editorId + '_editor');
+		const textarea = document.getElementById(editorId);
+		
+		if (!editorContainer && !textarea) {
+			console.debug('🗑️ Found orphaned widget:', editorId);
+			orphanedIds.push(editorId);
+			cleanupWidget(editorId);
+		}
+	});
+	
+	if (orphanedIds.length > 0) {
+		console.log('🧹 Cleaned up orphaned widgets:', orphanedIds);
+	} else {
+		console.debug('✅ No orphaned widgets found');
+	}
+}
+
 export function initWidgetWithData(
 	editorId: string,
 	editorConfig: EditorConfig,
@@ -52,8 +105,9 @@ export function initWidgetWithData(
 	templateConfig: TemplateConfig,
 ): void {
 	console.debug('Initializing BlockNote widget:', editorId);
+
 	console.debug('🎯 Slash menu config for', editorId, ':', slashMenuConfig);
-	console.debug('📄 Templates for', editorId, ':', docTemplates?.length || 0); // Debug templates
+	console.debug('📄 Templates for', editorId, ':', docTemplates?.length || 0);
 	console.debug(`🔧 Widget Manager - received templateConfig for ${editorId}:`, templateConfig);
 
 	const container = document.getElementById(editorId + '_editor');
@@ -63,6 +117,8 @@ export function initWidgetWithData(
 		console.error('Elements not found for editor:', editorId);
 		return;
 	}
+
+
 
 	// Process initial content FIRST - before we use it anywhere
 	let processedContent: unknown = null;
@@ -81,9 +137,12 @@ export function initWidgetWithData(
 	try {
 		textareaElement.value = textareaInitialValue;
 		console.debug(`🔧 Initialized textarea for ${editorId} with valid JSON:`, textareaInitialValue);
+		
+
 	} catch (error) {
 		console.error(`❌ Failed to initialize textarea JSON for ${editorId}:`, error);
 		textareaElement.value = '[]';
+		textareaElement.defaultValue = '[]';
 	}
 
 	// Extract fallback text
@@ -106,6 +165,8 @@ export function initWidgetWithData(
 		}
 	}
 
+
+	
 	// Change handler with error handling
 	const handleChange = (content: unknown) => {
 		try {
@@ -113,7 +174,7 @@ export function initWidgetWithData(
 			textareaElement.value = jsonContent;
 			textareaElement.dispatchEvent(new Event('change', { bubbles: true }));
 			textareaElement.dispatchEvent(new Event('input', { bubbles: true }));
-			console.debug(`📝 Updated textarea for ${editorId}`);
+			console.debug(`📝 Updated textarea for ${editorId} with content length: ${Array.isArray(content) ? content.length : 'non-array'}`);
 		} catch (error) {
 			console.error(`❌ Error updating textarea for ${editorId}:`, error);
 			textareaElement.value = '[]';
@@ -124,25 +185,28 @@ export function initWidgetWithData(
 	// RESTORED: Check if we have an existing root and update it (prevents flicker)
 	if (blockNoteRoots.has(editorId)) {
 		console.debug('Updating existing React root for:', editorId);
+		
+
+		
 		// Get the existing root and re-render with new props
 		const existingRoot = blockNoteRoots.get(editorId);
 		const element = React.createElement(BlockNoteEditor, {
 			editorId: editorId,
-			initialContent: processedContent, // Now this is defined!
+			initialContent: processedContent,
 			editorConfig: editorConfig,
 			uploadConfig: uploadConfig,
 			removalConfig: removalConfig,
 			slashMenuConfig: slashMenuConfig,
 			templates: docTemplates,
 			onChange: handleChange,
-			readonly: readonly, // This will change, but editor won't be recreated
+			readonly: readonly,
 			templateConfig,
 			debounceDelay: 300
 		});
-		existingRoot.render(element); // Re-render with new props
+		existingRoot.render(element);
 		console.debug('✅ BlockNote widget updated successfully:', editorId);
 		console.debug(`   📊 Total active widgets: ${blockNoteRoots.size}`);
-		return; // Don't create a new root
+		return;
 	}
 
 	// Only create new root if one doesn't exist
