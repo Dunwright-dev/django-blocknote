@@ -1,314 +1,358 @@
 import React, {
-	useState,
-	useCallback,
-	useEffect,
-	useRef,
-	useMemo
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo
 } from 'react';
 import {
-	useCreateBlockNote
+  useCreateBlockNote
 } from '@blocknote/react';
 import {
-	BlockNoteView
+  BlockNoteView
 } from '@blocknote/mantine';
 import {
-	DragHandleButton,
-	SideMenu,
-	SideMenuController,
-	type SideMenuProps
+  DragHandleButton,
+  SideMenu,
+  SideMenuController,
+  type SideMenuProps
 } from "@blocknote/react";
 import { findRemovedImages } from '../utils/documents';
 import { CustomSlashMenu } from './slash-menu';
 import {
-	useBlockNoteImageUpload,
-	useBlockNoteImageRemoval,
+  useBlockNoteImageUpload,
+  useBlockNoteImageRemoval,
 } from '../hooks';
 import type {
-	DocumentTemplate,
-	EditorConfig,
-	UploadConfig,
-	ImageUploadConfig,
-	RemovalConfig,
-	ImageRemovalConfig,
-	SlashMenuConfig,
-	TemplateConfig,
+  DocumentTemplate,
+  EditorConfig,
+  UploadConfig,
+  ImageUploadConfig,
+  RemovalConfig,
+  ImageRemovalConfig,
+  SlashMenuConfig,
+  TemplateConfig,
 } from '../types';
 import { DEFAULT_TEMPLATE_CONFIG } from '../types';
 import {
-	processDjangoEditorConfig
+  processDjangoEditorConfig
 } from '../utils/editorConfig';
 
 
 // Debounce hook
 function useDebounce<T extends (...args: any[]) => any>(
-	callback: T,
-	delay: number
+  callback: T,
+  delay: number
 ): T {
-	const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-	return useCallback(((...args: Parameters<T>) => {
-		if (timeoutRef.current) {
-			clearTimeout(timeoutRef.current);
-		}
-		timeoutRef.current = setTimeout(() => {
-			callback(...args);
-		}, delay);
-	}) as T, [callback, delay]);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  return useCallback(((...args: Parameters<T>) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      callback(...args);
+    }, delay);
+  }) as T, [callback, delay]);
 }
 
 // Main BlockNote Editor Component
 export function BlockNoteEditor({
-	editorId,
-	initialContent,
-	editorConfig = {},
-	onChange = null,
-	readonly = false,
-	uploadConfig = {},
-	removalConfig = {},
-	slashMenuConfig,
-	templates = [],
-	templateConfig,
-	debounceDelay = 300,
+  editorId,
+  initialContent,
+  editorConfig = {},
+  onChange = null,
+  readonly = false,
+  uploadConfig = {},
+  removalConfig = {},
+  slashMenuConfig,
+  templates = [],
+  templateConfig,
+  debounceDelay = 300,
 }: {
-	editorId: string;
-	initialContent?: any;
-	editorConfig?: EditorConfig;
-	onChange?: ((content: any) => void) | null;
-	readonly?: boolean;
-	uploadConfig?: UploadConfig;
-	removalConfig?: RemovalConfig;
-	slashMenuConfig?: SlashMenuConfig;
-	templates?: DocumentTemplate[];
-	templateConfig: TemplateConfig;
-	debounceDelay?: number;
+  editorId: string;
+  initialContent?: any;
+  editorConfig?: EditorConfig;
+  onChange?: ((content: any) => void) | null;
+  readonly?: boolean;
+  uploadConfig?: UploadConfig;
+  removalConfig?: RemovalConfig;
+  slashMenuConfig?: SlashMenuConfig;
+  templates?: DocumentTemplate[];
+  templateConfig: TemplateConfig;
+  debounceDelay?: number;
 }) {
-	console.debug('Creating BlockNote 0.41.1 editor...');
+  console.debug('Creating BlockNote 0.41.1 editor...');
 
-	// Use upload hook - cast to ImageUploadConfig since we know it's images for now
-	const { uploadFile } = useBlockNoteImageUpload(uploadConfig as ImageUploadConfig);
-	const { removeImages } = useBlockNoteImageRemoval(removalConfig as ImageRemovalConfig);
+  // Use upload hook - cast to ImageUploadConfig since we know it's images for now
+  const { uploadFile } = useBlockNoteImageUpload(uploadConfig as ImageUploadConfig);
+  const { removeImages } = useBlockNoteImageRemoval(removalConfig as ImageRemovalConfig);
 
-	// State to track readonly status
-	const [isReadonly, setIsReadonly] = useState(readonly);
+  // State to track readonly status
+  const [isReadonly, setIsReadonly] = useState(readonly);
 
-	// Track previous document state
-	const [previousDocument, setPreviousDocument] = useState(initialContent);
+  // Track previous document state
+  const [previousDocument, setPreviousDocument] = useState(initialContent);
 
-	// Separate state for the most recent content (for immediate UI updates)
-	const [currentContent, setCurrentContent] = useState(initialContent);
+  // Separate state for the most recent content (for immediate UI updates)
+  const [currentContent, setCurrentContent] = useState(initialContent);
 
-	//  Process Django config WITHOUT readonly dependency to prevent editor recreation
-	const processedEditorConfig = useMemo(() => {
-		console.debug('🔍 Processing config for editor creation:', {
-			editorId,
-			originalConfig: editorConfig
-		});
+  //  Process Django config WITHOUT readonly dependency to prevent editor recreation
+  const processedEditorConfig = useMemo(() => {
+    console.debug('🔍 Processing config for editor creation:', {
+      editorId,
+      originalConfig: editorConfig
+    });
 
-		const config = processDjangoEditorConfig(editorConfig);
-		console.debug('🔍 After processDjangoEditorConfig:', config);
+    const config = processDjangoEditorConfig(editorConfig);
+    console.debug('🔍 After processDjangoEditorConfig:', config);
 
-		// IMPORTANT: Don't handle readonly here - let it be handled separately
-		// This ensures the editor instance stays stable
+    // IMPORTANT: Don't handle readonly here - let it be handled separately
+    // This ensures the editor instance stays stable
 
-		// Clean up Django readonly flag but don't use it for editor creation
-		delete config._django_readonly;
+    // Clean up Django readonly flag but don't use it for editor creation
+    delete config._django_readonly;
 
-		return config;
-	}, [editorConfig]); //  Removed readonly from dependencies
+    return config;
+  }, [editorConfig]); //  Removed readonly from dependencies
 
-	console.debug('🔍 Final config being passed to useCreateBlockNote:', processedEditorConfig);
+  console.debug('🔍 Final config being passed to useCreateBlockNote:', processedEditorConfig);
 
-	// Create editor instance (stable - won't recreate on readonly changes)
-	const editor = useCreateBlockNote({
-		initialContent: initialContent || undefined,
-		...processedEditorConfig,
-		uploadFile: processedEditorConfig.uploadFile || uploadFile,
-	});
+  // Create editor instance (stable - won't recreate on readonly changes)
+  const editor = useCreateBlockNote({
+    initialContent: initialContent || undefined,
+    ...processedEditorConfig,
+    uploadFile: processedEditorConfig.uploadFile || uploadFile,
+  });
 
-	//  Handle readonly changes separately without recreating the editor
-	useEffect(() => {
-		if (editor) {
-			const shouldBeReadonly = readonly || isReadonly || editorConfig._django_readonly;
-			console.debug('🔍 READONLY CHANGE - Updating editor readonly state:', {
-				readonly,
-				isReadonly,
-				djangoReadonly: editorConfig._django_readonly,
-				finalReadonly: shouldBeReadonly
-			});
+  //  Handle readonly changes separately without recreating the editor
+  useEffect(() => {
+    if (editor) {
+      const shouldBeReadonly = readonly || isReadonly || editorConfig._django_readonly;
+      console.debug('🔍 READONLY CHANGE - Updating editor readonly state:', {
+        readonly,
+        isReadonly,
+        djangoReadonly: editorConfig._django_readonly,
+        finalReadonly: shouldBeReadonly
+      });
 
-			// Update the editor's editable state without recreating it
-			editor.isEditable = !shouldBeReadonly;
-		}
-	}, [editor, readonly, isReadonly, editorConfig._django_readonly]);
+      // Update the editor's editable state without recreating it
+      editor.isEditable = !shouldBeReadonly;
+    }
+  }, [editor, readonly, isReadonly, editorConfig._django_readonly]);
 
-	// Effect to watch for data-readonly changes
-	useEffect(() => {
-		if (!editorId) return;
+  // Effect to watch for data-readonly changes
+  useEffect(() => {
+    if (!editorId) return;
 
-		const container = document.querySelector(`[data-editor-id="${editorId}"]`);
-		if (!container) return;
+    const container = document.querySelector(`[data-editor-id="${editorId}"]`);
+    if (!container) return;
 
-		const observer = new MutationObserver((mutations) => {
-			mutations.forEach((mutation) => {
-				if (mutation.type === 'attributes' && mutation.attributeName === 'data-readonly') {
-					const newReadonlyValue = container.getAttribute('data-readonly') === "true";
-					console.debug(`Readonly state changed for ${editorId}:`, newReadonlyValue);
-					setIsReadonly(newReadonlyValue);
-				}
-			});
-		});
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-readonly') {
+          const newReadonlyValue = container.getAttribute('data-readonly') === "true";
+          console.debug(`Readonly state changed for ${editorId}:`, newReadonlyValue);
+          setIsReadonly(newReadonlyValue);
+        }
+      });
+    });
 
-		observer.observe(container, {
-			attributes: true,
-			attributeFilter: ['data-readonly']
-		});
+    observer.observe(container, {
+      attributes: true,
+      attributeFilter: ['data-readonly']
+    });
 
-		return () => {
-			observer.disconnect();
-		};
-	}, [editorId]); //  Removed editor dependency to prevent unnecessary re-runs
+    return () => {
+      observer.disconnect();
+    };
+  }, [editorId]); //  Removed editor dependency to prevent unnecessary re-runs
 
-	// Debounced function for expensive operations (image cleanup + external onChange)
-	const debouncedProcessChange = useDebounce((content: any) => {
-		try {
-			// Check for removed images (expensive operation)
-			if (previousDocument) {
-				const removedUrls = findRemovedImages(previousDocument, content);
-				if (removedUrls.length > 0) {
-					console.debug('🗑️ Detected removed images, sending for cleanup:', removedUrls);
-					removeImages(removedUrls).catch((error) => {
-						console.error('❌ Failed to remove images:', error);
-					});
-				}
-			}
+  // Debounced function for expensive operations (image cleanup + external onChange)
+  const debouncedProcessChange = useDebounce((content: any) => {
+    try {
+      // Check for removed images (expensive operation)
+      if (previousDocument) {
+        const removedUrls = findRemovedImages(previousDocument, content);
+        if (removedUrls.length > 0) {
+          console.debug('🗑️ Detected removed images, sending for cleanup:', removedUrls);
+          removeImages(removedUrls).catch((error) => {
+            console.error('❌ Failed to remove images:', error);
+          });
+        }
+      }
 
-			// Update previous document for next comparison
-			setPreviousDocument(content);
+      // Update previous document for next comparison
+      setPreviousDocument(content);
 
-			// Call external onChange (potentially expensive, like API calls)
-			if (onChange) {
-				onChange(content);
-				document.dispatchEvent(new CustomEvent('blocknote-change', {
-					detail: { content: content, editor }
-				}));
-			}
-		} catch (error) {
-			console.warn('Error during debounced change processing:', error);
-		}
-	}, debounceDelay);
+      // Call external onChange (potentially expensive, like API calls)
+      if (onChange) {
+        onChange(content);
+        document.dispatchEvent(new CustomEvent('blocknote-change', {
+          detail: { content: content, editor }
+        }));
+      }
+    } catch (error) {
+      console.warn('Error during debounced change processing:', error);
+    }
+  }, debounceDelay);
 
-	// Immediate change handler (for UI responsiveness)
-	const handleImmediateChange = useCallback(() => {
-		const shouldBeEditable = !(readonly || isReadonly || editorConfig._django_readonly);
-		if (editor && shouldBeEditable) {
-			try {
-				const content = editor.document;
-				// Update current content immediately (for UI state)
-				setCurrentContent(content);
-				// Process expensive operations with debounce
-				debouncedProcessChange(content);
-			} catch (error) {
-				console.warn('Error during immediate change handling:', error);
-			}
-		}
-	}, [editor, readonly, isReadonly, editorConfig._django_readonly, debouncedProcessChange]);
+  // Immediate change handler (for UI responsiveness)
+  const handleImmediateChange = useCallback(() => {
+    const shouldBeEditable = !(readonly || isReadonly || editorConfig._django_readonly);
+    if (editor && shouldBeEditable) {
+      try {
+        const content = editor.document;
+        // Update current content immediately (for UI state)
+        setCurrentContent(content);
+        // Process expensive operations with debounce
+        debouncedProcessChange(content);
+      } catch (error) {
+        console.warn('Error during immediate change handling:', error);
+      }
+    }
+  }, [editor, readonly, isReadonly, editorConfig._django_readonly, debouncedProcessChange]);
 
-	// Track if this component is being properly cleaned up (to avoid stale onChange calls)
-	const isUnmountingRef = useRef(false);
+  // Track if this component is being properly cleaned up (to avoid stale onChange calls)
+  const isUnmountingRef = useRef(false);
 
-	// Listen for cleanup events to prevent stale onChange calls
-	useEffect(() => {
-		const handleCleanup = (event: CustomEvent) => {
-			if (event.detail.editorId === editorId) {
-				console.debug('🧹 Received cleanup signal for:', editorId);
-				isUnmountingRef.current = true;
-			}
-		};
+  // Listen for cleanup events to prevent stale onChange calls
+  useEffect(() => {
+    const handleCleanup = (event: CustomEvent) => {
+      if (event.detail.editorId === editorId) {
+        console.debug('🧹 Received cleanup signal for:', editorId);
+        isUnmountingRef.current = true;
+      }
+    };
 
-		document.addEventListener('blocknote-cleanup', handleCleanup as EventListener);
-		
-		return () => {
-			document.removeEventListener('blocknote-cleanup', handleCleanup as EventListener);
-		};
-	}, [editorId]);
+    document.addEventListener('blocknote-cleanup', handleCleanup as EventListener);
 
-	// Cleanup debounced function on unmount
-	useEffect(() => {
-		return () => {
-			// Only call onChange on unmount if we have current content AND this isn't a forced cleanup
-			// This prevents stale content from previous widgets being passed to new widgets
-			if (currentContent && onChange && !isUnmountingRef.current) {
-				try {
-					// Double-check that the content isn't empty before firing final onChange
-					if (Array.isArray(currentContent) && currentContent.length > 0) {
-						onChange(currentContent);
-						console.debug('🔄 Final onChange on unmount for:', editorId);
-					} else {
-						console.debug('🧹 Skipping empty content onChange on unmount for:', editorId);
-					}
-				} catch (error) {
-					console.warn('Error during final change execution:', error);
-				}
-			} else {
-				console.debug('🧹 Skipping onChange on unmount for:', editorId, {
-					hasCurrentContent: !!currentContent,
-					hasOnChange: !!onChange,
-					isUnmounting: isUnmountingRef.current
-				});
-			}
-		};
-	}, [currentContent, onChange, editorId]);
+    return () => {
+      document.removeEventListener('blocknote-cleanup', handleCleanup as EventListener);
+    };
+  }, [editorId]);
 
-	//  Calculate editable state for BlockNoteView
-	const isEditable = !(readonly || isReadonly || editorConfig._django_readonly);
+  // ---------------------------------------------------------------------------
+  // External update listener (form-autosave draft restoration)
+  // ---------------------------------------------------------------------------
+  // Listens for 'form-field:external-update' on the hidden textarea.
+  // This is the restore side of the two-way contract with form-autosave:
+  //   Save:    BlockNote onChange → textarea.value + 'change' event  (already working)
+  //   Restore: autosave sets textarea.value + dispatches this event → we replace blocks
+  //
+  // The event is library-agnostic — any system that programmatically sets the
+  // textarea's value can dispatch it, and this listener will sync the editor.
+  useEffect(() => {
+    if (!editor || !editorId) return;
 
-	// Ensure theme is properly typed
-	const theme = (editorConfig.theme === 'dark' ? 'dark' : 'light') as 'light' | 'dark';
+    const textarea = document.getElementById(editorId) as HTMLTextAreaElement | null;
+    if (!textarea) return;
 
-	// If custom slash menu is enabled, add it as a child
-	if (slashMenuConfig?.enabled) {
-		return (
-			<BlockNoteView
-				editor={editor}
-				sideMenu={false}
-				editable={isEditable}
-				onChange={handleImmediateChange}
-				theme={theme}
-				slashMenu={false}
-			>
-				<SideMenuController
-					sideMenu={(props: SideMenuProps) => (
-						<SideMenu {...props}>
-							<DragHandleButton {...props} />
-						</SideMenu>
-					)}
-				/>
-				<CustomSlashMenu
-					editor={editor}
-					config={slashMenuConfig}
-					templates={templates}
-					templateConfig={templateConfig || DEFAULT_TEMPLATE_CONFIG}
-				/>
-			</BlockNoteView>
-		);
-	}
+    const handleExternalUpdate = () => {
+      try {
+        const raw = textarea.value;
+        const blocks = raw ? JSON.parse(raw) : [];
 
-	// Default return without custom slash menu but with side menu
-	return (
-		<BlockNoteView
-			editor={editor}
-			sideMenu={false}
-			editable={isEditable}
-			onChange={handleImmediateChange}
-			theme={theme}
-			slashMenu={true}
-		>
-			<SideMenuController
-				sideMenu={(props: SideMenuProps) => (
-					<SideMenu {...props}>
-						<DragHandleButton {...props} />
-					</SideMenu>
-				)}
-			/>
-		</BlockNoteView>
-	);
+        if (!Array.isArray(blocks) || blocks.length === 0) {
+          console.debug('📥 External update skipped (empty) for:', editorId);
+          return;
+        }
+
+        // Replace all top-level blocks with the restored content.
+        // This fires onChange → handleImmediateChange → textarea write-back,
+        // which is intentional: form-autosave expects the form to be marked
+        // dirty after a restore so the close guard stays active.
+        editor.replaceBlocks(editor.document, blocks);
+        console.debug('📥 External update applied for:', editorId);
+      } catch (err) {
+        console.warn('⚠️ Failed to apply external update for:', editorId, err);
+      }
+    };
+
+    textarea.addEventListener('form-field:external-update', handleExternalUpdate);
+
+    return () => {
+      textarea.removeEventListener('form-field:external-update', handleExternalUpdate);
+    };
+  }, [editor, editorId]);
+
+  // Cleanup debounced function on unmount
+  useEffect(() => {
+    return () => {
+      // Only call onChange on unmount if we have current content AND this isn't a forced cleanup
+      // This prevents stale content from previous widgets being passed to new widgets
+      if (currentContent && onChange && !isUnmountingRef.current) {
+        try {
+          // Double-check that the content isn't empty before firing final onChange
+          if (Array.isArray(currentContent) && currentContent.length > 0) {
+            onChange(currentContent);
+            console.debug('🔄 Final onChange on unmount for:', editorId);
+          } else {
+            console.debug('🧹 Skipping empty content onChange on unmount for:', editorId);
+          }
+        } catch (error) {
+          console.warn('Error during final change execution:', error);
+        }
+      } else {
+        console.debug('🧹 Skipping onChange on unmount for:', editorId, {
+          hasCurrentContent: !!currentContent,
+          hasOnChange: !!onChange,
+          isUnmounting: isUnmountingRef.current
+        });
+      }
+    };
+  }, [currentContent, onChange, editorId]);
+
+  //  Calculate editable state for BlockNoteView
+  const isEditable = !(readonly || isReadonly || editorConfig._django_readonly);
+
+  // Ensure theme is properly typed
+  const theme = (editorConfig.theme === 'dark' ? 'dark' : 'light') as 'light' | 'dark';
+
+  // If custom slash menu is enabled, add it as a child
+  if (slashMenuConfig?.enabled) {
+    return (
+      <BlockNoteView
+        editor={editor}
+        sideMenu={false}
+        editable={isEditable}
+        onChange={handleImmediateChange}
+        theme={theme}
+        slashMenu={false}
+      >
+        <SideMenuController
+          sideMenu={(props: SideMenuProps) => (
+            <SideMenu {...props}>
+              <DragHandleButton {...props} />
+            </SideMenu>
+          )}
+        />
+        <CustomSlashMenu
+          editor={editor}
+          config={slashMenuConfig}
+          templates={templates}
+          templateConfig={templateConfig || DEFAULT_TEMPLATE_CONFIG}
+        />
+      </BlockNoteView>
+    );
+  }
+
+  // Default return without custom slash menu but with side menu
+  return (
+    <BlockNoteView
+      editor={editor}
+      sideMenu={false}
+      editable={isEditable}
+      onChange={handleImmediateChange}
+      theme={theme}
+      slashMenu={true}
+    >
+      <SideMenuController
+        sideMenu={(props: SideMenuProps) => (
+          <SideMenu {...props}>
+            <DragHandleButton {...props} />
+          </SideMenu>
+        )}
+      />
+    </BlockNoteView>
+  );
 }
