@@ -2,9 +2,10 @@
 
 ```{admonition} Quickstart
 We are making updates quite quickly so the quickstart
-may get out of sync. Please create an issue if something
-is incorrect.
+may get out of sync. Please [create an issue](https://github.com/Dunwright-dev/django-blocknote/issues)
+if something is incorrect.
 ```
+
 ## Overview
 
 This guide walks you through setting up the Django BlockNote custom field in your Django project. Django BlockNote provides a rich text editor with block-based content editing capabilities, complete with customizable options for different user types and use cases.
@@ -41,6 +42,51 @@ INSTALLED_APPS = [
 python manage.py migrate
 ```
 
+### Step 4: Include URLs
+
+Add the django_blocknote URLs to your project's URL configuration:
+
+```python
+# urls.py
+from django.urls import include, path
+
+urlpatterns = [
+    # ... your other URLs
+    path('django-blocknote/', include('django_blocknote.urls')),
+]
+```
+
+This provides the default image upload and removal endpoints. If you configure
+custom `uploadUrl` or `removalUrl` values in your field config, you can skip
+this step for those specific endpoints.
+
+## Data Format
+
+BlockNote stores content as a JSON array of block objects. A simple document
+looks like this:
+
+```json
+[
+    {
+        "id": "abc123",
+        "type": "heading",
+        "props": {"level": 1},
+        "content": [{"type": "text", "text": "Hello World"}],
+        "children": []
+    },
+    {
+        "id": "def456",
+        "type": "paragraph",
+        "props": {},
+        "content": [{"type": "text", "text": "This is a paragraph."}],
+        "children": []
+    }
+]
+```
+
+This is what gets saved to your database field and what you'll see if you
+inspect the field value in the Django shell or admin.
+
 ## Basic Field Setup
 
 ### Import the Field
@@ -68,7 +114,7 @@ class BlogPost(models.Model):
             'animations': True,
         },
         image_upload_config={
-            'img_model': 'blog:BlogPost',  # app:model format
+            'img_model': 'blog:BlogPost',  # app_label:ModelName format
             'maxFileSize': 10 * 1024 * 1024,  # 10MB
             'allowedTypes': ['image/*']
         },
@@ -81,6 +127,10 @@ class BlogPost(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 ```
+
+The `img_model` value uses `app_label:ModelName` format, matching your Django
+app's label (from `AppConfig.label` or the last segment of the dotted app path)
+and the model class name.
 
 ## Configuration Options
 
@@ -131,13 +181,38 @@ image_removal_config = {
 
 ### Menu Type Configuration
 
-The `menu_type` parameter controls which slash menu configuration to use:
+The `menu_type` parameter controls which slash menu configuration to use. Menu
+types are defined in your Django settings via `DJ_BN_SLASH_MENU_CONFIGS`. The
+widget looks up the specified `menu_type` key in this dictionary:
 
-- `'default'`: Limited feature set for regular users
-- `'admin'`: Full access to all features
-- `'blog'`: Optimized for blog content
-- `'documentation'`: Suitable for documentation
-- `'template'`: Template creation mode
+```python
+# settings.py
+DJ_BN_SLASH_MENU_CONFIGS = {
+    '_default': {
+        'enabled': False,
+    },
+    'admin': {
+        'enabled': True,
+        'mode': 'default',
+    },
+    'blog': {
+        'enabled': True,
+        'mode': 'filtered',
+        'disabled_items': ['video', 'audio', 'file'],
+    },
+    'documentation': {
+        'enabled': True,
+        'mode': 'filtered',
+        'disabled_items': ['image', 'video', 'audio'],
+    },
+}
+```
+
+If the specified `menu_type` is not found in `DJ_BN_SLASH_MENU_CONFIGS`, the
+`_default` configuration is used as a fallback. A warning will appear in the
+server logs when this happens.
+
+Use the `menu_type` in your field definition:
 
 ```python
 # Example configurations
@@ -181,6 +256,46 @@ class BlogPostUpdateView(BlockNoteViewMixin, UpdateView):
     template_name = 'blog/update_post.html'
 ```
 
+### Template Setup
+
+Include the form's media files in your template. This loads the BlockNote
+editor JavaScript and CSS:
+
+```html
+{% block extra_head %}
+  {{ form.media }}
+{% endblock %}
+
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_div }}
+  <button type="submit">Save</button>
+</form>
+```
+
+Without `{{ form.media }}`, the editor will not render and you'll see the raw
+textarea fallback instead.
+
+### Displaying Content (Readonly Mode)
+
+To render saved BlockNote content in a read-only view, use the widget's
+readonly mode in your form:
+
+```python
+from django_blocknote.widgets import BlockNoteWidget
+
+class BlogPostDisplayForm(BlockNoteModelFormMixin):
+    class Meta:
+        model = BlogPost
+        fields = ['content']
+        widgets = {
+            'content': BlockNoteWidget(mode='readonly'),
+        }
+```
+
+This renders the editor without editing controls, toolbars, or the slash
+menu — suitable for public-facing pages.
+
 ## Architecture Overview
 
 ```{mermaid}
@@ -220,6 +335,98 @@ sequenceDiagram
     Field->>Settings: Read configuration
     Field->>Widget: Initialize with config
     Widget->>Widget: Render editor with settings
+```
+
+## External Content Updates
+
+BlockNote editors sync content to a hidden `<textarea>` element. When content
+changes inside the editor, the textarea's value is updated automatically and
+standard `change` and `input` events are dispatched — so any form-level
+listener (autosave, validation, dirty tracking) can detect changes without
+knowing about BlockNote.
+
+The reverse direction — setting editor content from an external system —
+requires an extra step. Setting the textarea's `.value` alone does not update
+the visual editor, because BlockNote manages its own internal document state.
+
+### Updating editor content from JavaScript
+
+After setting the textarea's value, dispatch the `form-field:external-update`
+event. BlockNote will parse the JSON and replace the editor content:
+
+```javascript
+const textarea = document.getElementById('id_content')  // your field's id
+const blocks = [
+    {
+        "type": "paragraph",
+        "content": [{"type": "text", "text": "Restored content"}]
+    }
+]
+
+textarea.value = JSON.stringify(blocks)
+textarea.dispatchEvent(new CustomEvent('form-field:external-update', { bubbles: true }))
+```
+
+### Event contract
+
+| Property | Value |
+|----------|-------|
+| Event name | `form-field:external-update` |
+| Dispatched on | The hidden `<textarea>` element |
+| Bubbles | Yes |
+| Prerequisite | `.value` must be set to valid BlockNote JSON before dispatch |
+| Result | Editor replaces all blocks with the parsed content |
+
+### Common use cases
+
+- **Form autosave / draft restoration** — restoring saved form state from
+  localStorage or a server endpoint
+- **Form pre-fill** — populating editor content from a different data source
+- **Testing** — setting editor content programmatically in integration tests
+
+### Two-way event summary
+
+| Direction | What happens | Event |
+|-----------|-------------|-------|
+| Editor → external | User edits content, textarea updated | `change` and `input` (standard DOM) |
+| External → editor | System sets textarea value | `form-field:external-update` (custom) |
+
+### Important notes
+
+- The event name is intentionally generic and not BlockNote-specific. Other
+  widget libraries can adopt the same convention.
+- After the editor processes the update, it will fire its normal `onChange`
+  cycle, which writes back to the textarea and dispatches `change`. This is
+  expected and ensures form-level listeners stay in sync.
+- The textarea value must be valid BlockNote JSON (an array of block objects).
+  Invalid JSON is silently ignored with a console warning.
+- If you are using a form autosave system that saves to localStorage, you may
+  want to suppress the save cycle that occurs immediately after restoration to
+  avoid writing identical data. A short cooldown flag in your autosave's change
+  handler is the simplest approach.
+
+### Integration with form autosave systems
+
+```{mermaid}
+sequenceDiagram
+    participant AS as Form Autosave
+    participant TA as Hidden Textarea
+    participant BN as BlockNote Editor
+
+    Note over AS,BN: Save direction (editor → autosave)
+    BN->>TA: User edits → textarea.value = JSON
+    BN->>TA: Dispatches 'change' event
+    TA->>AS: Delegated listener detects change
+    AS->>AS: Debounced save to localStorage
+
+    Note over AS,BN: Restore direction (autosave → editor)
+    AS->>TA: textarea.value = saved JSON
+    AS->>TA: Dispatches 'input' event (for Alpine/frameworks)
+    AS->>TA: Dispatches 'form-field:external-update'
+    TA->>BN: Listener parses JSON
+    BN->>BN: editor.replaceBlocks() — visual update
+    BN->>TA: onChange fires → textarea write-back
+    Note over AS: Cooldown suppresses redundant save
 ```
 
 ## Advanced Configuration Examples
@@ -286,7 +493,6 @@ class BlogPost(models.Model):
 ### Function-Based View Integration
 
 ```python
-from django_blocknote.mixins import BlockNoteModelFormMixin
 
 def create_blog_post(request):
     if request.method == 'POST':
@@ -307,15 +513,27 @@ def create_blog_post(request):
 1. **Widget not rendering properly**
    - Ensure you're using `BlockNoteViewMixin` in your views
    - Verify that `BlockNoteModelFormMixin` is used in your forms
+   - Check that `{{ form.media }}` is included in your template's `<head>`
 
 2. **Image uploads failing**
    - Check `MEDIA_URL` and `MEDIA_ROOT` settings
    - Verify image upload permissions
    - Ensure the upload URL is properly configured
+   - Confirm `django_blocknote.urls` is included in your URL configuration
 
 3. **User context not available**
    - Make sure to pass `user=request.user` to form initialization
    - Use the provided mixins for automatic user context handling
+
+4. **Menu type not working as expected**
+   - Verify the `menu_type` key exists in `DJ_BN_SLASH_MENU_CONFIGS` in your settings
+   - Check the server logs for warnings about missing menu type configurations
+   - If no configuration is found, the `_default` fallback is used
+
+5. **Programmatically setting editor content doesn't update the editor**
+   - Setting the hidden textarea's `.value` directly won't update the visual editor
+   - You must dispatch `form-field:external-update` on the textarea after setting the value
+   - See the [External Content Updates](#external-content-updates) section for details
 
 ### Debug Mode
 
@@ -339,7 +557,10 @@ After setting up the basic field configuration:
 3. Configure different editor themes for different user types
 4. Implement content validation and sanitization
 5. Set up content export and import functionality
+6. Integrate with form autosave or draft systems using the `form-field:external-update` event contract
 
 ## Related Configuration
 
-For advanced customization, you'll need to configure the global Django BlockNote settings in your `settings.py`. This includes slash menu configurations, image handling settings, and theme customization options.
+For advanced customization, you'll need to configure the global Django BlockNote
+settings in your `settings.py`. This includes slash menu configurations, image
+handling settings, and theme customization options.
