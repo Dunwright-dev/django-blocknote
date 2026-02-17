@@ -3,7 +3,7 @@
 examples/*
 
 # Built static assets (these are generated)
-django_blocknote/static/
+# django_blocknote/static/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
