@@ -2,6 +2,18 @@
 
 <!--next-version-placeholder-->
 
+## [2026.02.17.1]
+
+### Maintenance
+- Update for deploy (assets) [#81](https://github.com/Dunwright-dev/django-blocknote/pull/81)
+
+### Documentation
+- Add django form-save integration (quickstart) [#81](https://github.com/Dunwright-dev/django-blocknote/pull/81)
+
+### Features
+- Add django form draft save integration (frontend) [#81](https://github.com/Dunwright-dev/django-blocknote/pull/81)
+
+
 ## [2025.11.11.1]
 
 ### Bug Fixes
