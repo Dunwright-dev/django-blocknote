@@ -119,9 +119,9 @@ Other
 
 * Mention
 
-.. |Downloads| image:: https://img.shields.io/pypi/dm/django-blocknote?style=flat
-    :target: https://pypi.org/project/django-blocknote/
-    :alt: PyPI - Downloads
+.. |Downloads| image:: https://static.pepy.tech/badge/django-blocknote
+    :target: https://pepy.tech/projects/django-blocknote
+    :alt: Total downloads
 .. |Version| image:: https://img.shields.io/pypi/v/django-blocknote
     :target: https://pypi.org/project/django-blocknote/
     :alt: PyPI - Version
