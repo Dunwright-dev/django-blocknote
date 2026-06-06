@@ -3,6 +3,12 @@ Django BlockNote
 
 |Repo| |Version| |Python| |Django| |Docs| |Downloads|
 
+    **This GitHub repository has moved and is no longer updated here.**
+
+    Development of django-blocknote continues on Codeberg:
+    https://codeberg.org/dunwright/django-blocknote
+
+    Please update your bookmarks, links, and dependencies to point there.
 
 Licenses
 --------
@@ -33,7 +39,7 @@ Ideal For:
 **Includes the following BlockNote features:**
 
 Text Formatting
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 
 **Basic:**
 
@@ -116,23 +122,18 @@ Other
 .. |Downloads| image:: https://img.shields.io/pypi/dm/django-blocknote?style=flat
     :target: https://pypi.org/project/django-blocknote/
     :alt: PyPI - Downloads
-
 .. |Version| image:: https://img.shields.io/pypi/v/django-blocknote
     :target: https://pypi.org/project/django-blocknote/
     :alt: PyPI - Version
-
 .. |Docs| image:: https://readthedocs.org/projects/django-blocknote/badge/?version=latest
     :target: https://django-blocknote.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
-
 .. |Python| image:: https://img.shields.io/pypi/pyversions/django-blocknote
     :target: https://www.python.org/
     :alt: PyPI - Python Version
-
 .. |Django| image:: https://img.shields.io/pypi/frameworkversions/django/django-blocknote
     :target: https://docs.djangoproject.com/en/4.2/
     :alt: PyPI - Versions from Framework Classifiers
-
-.. |Repo| image:: https://www.repostatus.org/badges/latest/wip.svg
-    :target: https://www.repostatus.org/#wip
-    :alt: Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.
+.. |Repo| image:: https://www.repostatus.org/badges/latest/moved.svg
+    :alt: Project Status: Moved to https://codeberg.org/dunwright/django-blocknote – The project has been moved to a new location, and the version at that location should be considered authoritative.
+    :target: https://www.repostatus.org/#moved
